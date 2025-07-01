@@ -1,31 +1,66 @@
 --[[
-FE Troll ModMenu - Natural Disaster Survival [No Anim, No Outline]
-Tema: Dark + Purple (Nxzott Style, no anim, no menuBtn outline)
-Fitur: Disaster info, teleport aman/player, godmode, fling, noclip, fly, autojump, invisible, respawn, hide name, + fitur troll tambahan
-Script by Copilot for @nxzott
-
+Natural Disaster Survival - FE Troll GUI (Nxzott Theme)
+Fitur: Lihat disaster, teleport, godmode, fling, bring, freeze, speed, noclip, dll
+FE Supported (client-side troll for fun, not harmful)
+By Copilot for @nxzott
 ]]
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
-local Rep = game:GetService("ReplicatedStorage")
-local lp = Players.LocalPlayer
+local TS = game:GetService("TweenService")
+local Cam = workspace.CurrentCamera
 
 -- THEME
 local ACCENT = Color3.fromRGB(162, 89, 236)
-local ACCENT2 = Color3.fromRGB(135, 82, 198)
 local DARK = Color3.fromRGB(21, 20, 26)
 local DARK2 = Color3.fromRGB(36, 34, 44)
 local WHITE = Color3.fromRGB(230,230,240)
+local BTN_ON  = ACCENT
+local BTN_OFF = Color3.fromRGB(96, 60, 128)
 
--- Remove previous
-if game.CoreGui:FindFirstChild("ModMenuNxzott") then
-    game.CoreGui.ModMenuNxzott:Destroy()
-end
+if game.CoreGui:FindFirstChild("NXZ_FE_Troll") then game.CoreGui.NXZ_FE_Troll:Destroy() end
 
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "NXZ_FE_Troll"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+-- Menu Button
+local MENU_SIZE = 44
+local menuBtn = Instance.new("ImageButton")
+menuBtn.Size = UDim2.new(0, MENU_SIZE, 0, MENU_SIZE)
+menuBtn.Position = UDim2.new(0.5, -MENU_SIZE/2, 0, 12)
+menuBtn.BackgroundTransparency = 1
+menuBtn.Image = "rbxassetid://3570695787"
+menuBtn.ImageColor3 = DARK2
+menuBtn.Parent = gui
+local menuStroke = Instance.new("UIStroke", menuBtn)
+menuStroke.Color = ACCENT
+menuStroke.Thickness = 2
+menuStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+menuBtn.AutoButtonColor = false
+local icon = Instance.new("ImageLabel", menuBtn)
+icon.BackgroundTransparency = 1
+icon.Size = UDim2.new(0.6,0,0.6,0)
+icon.Position = UDim2.new(0.2,0,0.2,0)
+icon.Image = "rbxassetid://6035047409"
+icon.ImageColor3 = ACCENT
+
+-- Anim press
+menuBtn.MouseButton1Down:Connect(function()
+    TS:Create(menuBtn, TweenInfo.new(0.14, Enum.EasingStyle.Back), {Size=UDim2.new(0,MENU_SIZE+8,0,MENU_SIZE+8)}):Play()
+    TS:Create(menuBtn, TweenInfo.new(0.14, Enum.EasingStyle.Back), {ImageColor3=ACCENT}):Play()
+end)
+menuBtn.MouseButton1Up:Connect(function()
+    TS:Create(menuBtn, TweenInfo.new(0.12, Enum.EasingStyle.Back), {Size=UDim2.new(0,MENU_SIZE,0,MENU_SIZE)}):Play()
+    TS:Create(menuBtn, TweenInfo.new(0.12, Enum.EasingStyle.Back), {ImageColor3=DARK2}):Play()
+end)
+
+-- Helper: draggable
 local function makeDraggable(frame)
     local dragToggle, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -48,57 +83,58 @@ local function makeDraggable(frame)
         end
     end)
 end
-
--- UI
-local gui = Instance.new("ScreenGui")
-gui.Name = "ModMenuNxzott"
-gui.Parent = game:GetService("CoreGui")
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-
--- Menu Button (NO outline)
-local MENU_SIZE = 44
-local menuBtn = Instance.new("ImageButton")
-menuBtn.Name = "MenuBtn"
-menuBtn.Size = UDim2.new(0, MENU_SIZE, 0, MENU_SIZE)
-menuBtn.Position = UDim2.new(0.5, -MENU_SIZE/2, 0, 12)
-menuBtn.AnchorPoint = Vector2.new(0,0)
-menuBtn.BackgroundTransparency = 1
-menuBtn.Image = "rbxassetid://3570695787"
-menuBtn.ImageColor3 = DARK2
-menuBtn.Parent = gui
-
-local icon = Instance.new("ImageLabel")
-icon.Parent = menuBtn
-icon.BackgroundTransparency = 1
-icon.Size = UDim2.new(0.6,0,0.6,0)
-icon.Position = UDim2.new(0.2,0,0.2,0)
-icon.Image = "rbxassetid://6035047409"
-icon.ImageColor3 = ACCENT
-
 makeDraggable(menuBtn)
 
 -- Dialog
-local DIALOG_W, DIALOG_H = 370, 495
-local dialog = Instance.new("Frame")
-dialog.Name = "Dialog"
+local DIALOG_W, DIALOG_H = 360, 410
+local dialog = Instance.new("Frame", gui)
 dialog.Position = UDim2.new(0.5, -DIALOG_W/2, 0.13, 0)
 dialog.Size = UDim2.new(0, DIALOG_W, 0, DIALOG_H)
 dialog.BackgroundColor3 = DARK2
-dialog.BackgroundTransparency = 0.06
+dialog.BackgroundTransparency = 1
 dialog.Visible = false
-dialog.Parent = gui
 dialog.Active = true
 dialog.ClipsDescendants = true
-
 local corner = Instance.new("UICorner", dialog)
 corner.CornerRadius = UDim.new(0,16)
-
+local dialogStroke = Instance.new("UIStroke", dialog)
+dialogStroke.Thickness = 2
+dialogStroke.Color = ACCENT
+dialogStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 makeDraggable(dialog)
+local function showDialog()
+    dialog.Visible = true
+    dialog.BackgroundTransparency = 1
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then v.TextTransparency = 1 end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then v.BackgroundTransparency = 1 end
+    end
+    TS:Create(dialog, TweenInfo.new(0.19), {BackgroundTransparency=0.07}):Play()
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then
+            TS:Create(v, TweenInfo.new(0.21), {TextTransparency=0}):Play()
+        end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+            TS:Create(v, TweenInfo.new(0.21), {BackgroundTransparency=0}):Play()
+        end
+    end
+end
+local function hideDialog()
+    TS:Create(dialog, TweenInfo.new(0.15), {BackgroundTransparency=1}):Play()
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then
+            TS:Create(v, TweenInfo.new(0.15), {TextTransparency=1}):Play()
+        end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+            TS:Create(v, TweenInfo.new(0.15), {BackgroundTransparency=1}):Play()
+        end
+    end
+    wait(0.16)
+    dialog.Visible = false
+end
 
 -- Close btn
-local closeBtn = Instance.new("TextButton")
-closeBtn.Parent = dialog
+local closeBtn = Instance.new("TextButton", dialog)
 closeBtn.Size = UDim2.new(0,28,0,28)
 closeBtn.Position = UDim2.new(1, -38, 0, 10)
 closeBtn.BackgroundColor3 = DARK
@@ -106,70 +142,115 @@ closeBtn.Text = "⨉"
 closeBtn.TextColor3 = WHITE
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBlack
+closeBtn.BackgroundTransparency = 0
 closeBtn.BorderSizePixel = 0
-
 local closeCorner = Instance.new("UICorner", closeBtn)
 closeCorner.CornerRadius = UDim.new(1,0)
 
-local title = Instance.new("TextLabel")
-title.Parent = dialog
+-- Title
+local title = Instance.new("TextLabel", dialog)
 title.Position = UDim2.new(0, 0, 0, 10)
 title.Size = UDim2.new(1, 0, 0, 34)
-title.Text = "FE Troll - Natural Disaster"
+title.Text = "Nxzott FE Troll - NDS"
 title.Font = Enum.Font.GothamBold
 title.TextColor3 = WHITE
 title.BackgroundTransparency = 1
 title.TextScaled = true
 
--- Disaster Info
-local disasterLabel = Instance.new("TextLabel")
-disasterLabel.Parent = dialog
-disasterLabel.Position = UDim2.new(0, 20, 0, 48)
-disasterLabel.Size = UDim2.new(1,-40,0,26)
-disasterLabel.Text = "Disaster: (unknown)"
+-- Disaster Detector
+local disasterLabel = Instance.new("TextLabel", dialog)
+disasterLabel.Position = UDim2.new(0,18,0,46)
+disasterLabel.Size = UDim2.new(1,-36,0,28)
+disasterLabel.BackgroundTransparency = 1
+disasterLabel.Text = "Disaster: Loading..."
 disasterLabel.TextColor3 = ACCENT
 disasterLabel.Font = Enum.Font.GothamBold
-disasterLabel.TextScaled = true
-disasterLabel.BackgroundTransparency = 1
+disasterLabel.TextSize = 18
+disasterLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Teleport safe
-local safeBtn = Instance.new("TextButton")
-safeBtn.Parent = dialog
-safeBtn.Position = UDim2.new(0,20,0,84)
-safeBtn.Size = UDim2.new(0,150,0,30)
-safeBtn.Text = "Teleport Aman"
+-- Disaster detector function
+local function getDisaster()
+    local disaster = "Unknown"
+    -- 1. Cek gui
+    for _,gui in ipairs(lp.PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui:FindFirstChild("Disaster") then
+            local txt = gui.Disaster:FindFirstChildWhichIsA("TextLabel")
+            if txt and txt.Text~="" then
+                disaster = txt.Text
+                break
+            end
+        end
+    end
+    -- 2. Cek workspace
+    for _,obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Model") and obj:FindFirstChild("DisasterScript") then
+            disaster = obj.Name
+            break
+        end
+    end
+    return disaster
+end
+
+coroutine.wrap(function()
+    while true do
+        if dialog.Visible then
+            pcall(function()
+                disasterLabel.Text = "Disaster: " .. getDisaster()
+            end)
+        end
+        wait(0.7)
+    end
+end)()
+
+-- Safe Spot Teleport
+local safeBtn = Instance.new("TextButton", dialog)
+safeBtn.Position = UDim2.new(0,18,0,82)
+safeBtn.Size = UDim2.new(1,-36,0,33)
+safeBtn.Text = "Teleport to Safe Spot"
 safeBtn.Font = Enum.Font.GothamBold
-safeBtn.TextColor3 = WHITE
+safeBtn.TextSize = 17
 safeBtn.BackgroundColor3 = ACCENT
-safeBtn.TextSize = 16
-
+safeBtn.TextColor3 = WHITE
+safeBtn.BorderSizePixel = 0
+safeBtn.AutoButtonColor = true
 local safeCorner = Instance.new("UICorner", safeBtn)
 safeCorner.CornerRadius = UDim.new(0,10)
 
--- Teleport ke Player
-local playerLabel = Instance.new("TextLabel")
-playerLabel.Parent = dialog
-playerLabel.Position = UDim2.new(0,190,0,84)
-playerLabel.Size = UDim2.new(0,50,0,24)
-playerLabel.Text = "Ke Player:"
-playerLabel.TextColor3 = WHITE
+safeBtn.MouseButton1Click:Connect(function()
+    -- Cari tempat tertinggi (pohon/menara/atas map)
+    local safePos = workspace.Baseplate.Position + Vector3.new(0,120,0)
+    for _,obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():find("tower") or obj.Name:lower():find("tree") or obj.Name:lower():find("house")) then
+            if obj.Position.Y > safePos.Y then
+                safePos = Vector3.new(obj.Position.X, obj.Position.Y+3, obj.Position.Z)
+            end
+        end
+    end
+    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+        lp.Character.HumanoidRootPart.CFrame = CFrame.new(safePos)
+    end
+end)
+
+-- Teleport to Player (dropdown)
+local playerLabel = Instance.new("TextLabel", dialog)
+playerLabel.Text = "Target:"
+playerLabel.Position = UDim2.new(0,18,0,128)
+playerLabel.Size = UDim2.new(0,80,0,22)
 playerLabel.Font = Enum.Font.Gotham
+playerLabel.TextColor3 = WHITE
 playerLabel.TextXAlignment = Enum.TextXAlignment.Left
 playerLabel.BackgroundTransparency = 1
 playerLabel.TextSize = 16
 
-local dropdown = Instance.new("Frame")
-dropdown.Parent = dialog
-dropdown.Position = UDim2.new(0,250,0,84)
-dropdown.Size = UDim2.new(0, 90, 0, 24)
+local dropdown = Instance.new("Frame", dialog)
+dropdown.Position = UDim2.new(0,90,0,128)
+dropdown.Size = UDim2.new(0, 170, 0, 22)
 dropdown.BackgroundColor3 = DARK
 dropdown.BorderSizePixel = 0
-
 local dropdownCorner = Instance.new("UICorner", dropdown)
 dropdownCorner.CornerRadius = UDim.new(0,8)
 
-local selected = Instance.new("TextButton")
-selected.Parent = dropdown
+local selected = Instance.new("TextButton", dropdown)
 selected.Size = UDim2.new(1,0,1,0)
 selected.BackgroundTransparency = 1
 selected.TextColor3 = WHITE
@@ -178,8 +259,7 @@ selected.Font = Enum.Font.Gotham
 selected.TextSize = 15
 selected.TextXAlignment = Enum.TextXAlignment.Left
 
-local dropList = Instance.new("ScrollingFrame")
-dropList.Parent = dropdown
+local dropList = Instance.new("ScrollingFrame", dropdown)
 dropList.Size = UDim2.new(1,0,0,0)
 dropList.Position = UDim2.new(0,0,1,0)
 dropList.CanvasSize = UDim2.new(0,0,0,0)
@@ -188,7 +268,6 @@ dropList.BackgroundColor3 = DARK
 dropList.BorderSizePixel = 0
 dropList.ScrollBarThickness = 4
 dropList.ZIndex = 10
-
 local dropListCorner = Instance.new("UICorner", dropList)
 dropListCorner.CornerRadius = UDim.new(0,8)
 
@@ -199,7 +278,7 @@ local function refreshDropdown()
         if v ~= lp then table.insert(players, v) end
     end
     dropList.CanvasSize = UDim2.new(0,0,0,#players * 22)
-    dropList.Size = UDim2.new(1,0,0,#players > 6 and 120 or #players*22)
+    dropList.Size = UDim2.new(1,0,0,#players > 5 and 110 or #players*22)
     for i,plr in ipairs(players) do
         local btn = Instance.new("TextButton")
         btn.Parent = dropList
@@ -209,7 +288,7 @@ local function refreshDropdown()
         btn.Text = plr.Name
         btn.Font = Enum.Font.Gotham
         btn.TextColor3 = WHITE
-        btn.TextSize = 13
+        btn.TextSize = 15
         btn.ZIndex = 11
         btn.TextXAlignment = Enum.TextXAlignment.Left
         btn.MouseButton1Click:Connect(function()
@@ -225,259 +304,152 @@ selected.MouseButton1Click:Connect(function()
     dropList.Visible = not dropList.Visible
 end)
 
-local tpPlayerBtn = Instance.new("TextButton")
-tpPlayerBtn.Parent = dialog
-tpPlayerBtn.Position = UDim2.new(0,250,0,112)
-tpPlayerBtn.Size = UDim2.new(0,90,0,26)
-tpPlayerBtn.Text = "TP ke Player"
-tpPlayerBtn.Font = Enum.Font.GothamBold
-tpPlayerBtn.TextColor3 = WHITE
-tpPlayerBtn.BackgroundColor3 = ACCENT2
-tpPlayerBtn.TextSize = 13
-
-local tpPlayerCorner = Instance.new("UICorner", tpPlayerBtn)
-tpPlayerCorner.CornerRadius = UDim.new(0,8)
-
--- Fitur utama
-local function makeSwitch(text, color, posY)
-    local btn = Instance.new("TextButton")
-    btn.Parent = dialog
-    btn.Position = UDim2.new(0,20,0,posY)
-    btn.Size = UDim2.new(0,145,0,26)
-    btn.Text = text .. ": OFF"
-    btn.BackgroundColor3 = DARK
-    btn.TextColor3 = color
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    local cr = Instance.new("UICorner", btn)
-    cr.CornerRadius = UDim.new(0,8)
-    return btn
-end
-
-local function makeAction(text, color, posY)
-    local btn = Instance.new("TextButton")
-    btn.Parent = dialog
-    btn.Position = UDim2.new(0,190,0,posY)
-    btn.Size = UDim2.new(0,145,0,26)
-    btn.Text = text
-    btn.BackgroundColor3 = ACCENT2
-    btn.TextColor3 = color
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    local cr = Instance.new("UICorner", btn)
-    cr.CornerRadius = UDim.new(0,8)
-    return btn
-end
-
-local god = false
-local godBtn = makeSwitch("GodMode", Color3.fromRGB(255,80,200), 154)
-godBtn.MouseButton1Click:Connect(function()
-    god = not god
-    godBtn.Text = "GodMode: " .. (god and "ON" or "OFF")
-    godBtn.TextColor3 = god and ACCENT or Color3.fromRGB(255,80,200)
-end)
-
-local flingBtn = makeAction("Fling Self", WHITE, 154)
-flingBtn.MouseButton1Click:Connect(function()
-    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.Velocity = Vector3.new(math.random(-300,300),300,math.random(-300,300))
-    end
-end)
-
-local flingOtherBtn = makeAction("Fling Target", WHITE, 184)
-flingOtherBtn.MouseButton1Click:Connect(function()
-    local target = Players:FindFirstChild(selected.Text)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        target.Character.HumanoidRootPart.Velocity = Vector3.new(math.random(-250,250),250,math.random(-250,250))
-    end
-end)
-
-local noclip = false
-local noclipBtn = makeSwitch("Noclip", Color3.fromRGB(255,120,180), 184)
-noclipBtn.MouseButton1Click:Connect(function()
-    noclip = not noclip
-    noclipBtn.Text = "Noclip: " .. (noclip and "ON" or "OFF")
-    noclipBtn.TextColor3 = noclip and ACCENT or Color3.fromRGB(255,120,180)
-end)
-
-local fly = false
-local flyBtn = makeSwitch("Fly", ACCENT2, 214)
-flyBtn.MouseButton1Click:Connect(function()
-    fly = not fly
-    flyBtn.Text = "Fly: " .. (fly and "ON" or "OFF")
-    flyBtn.TextColor3 = fly and ACCENT or ACCENT2
-end)
-
-local autojump = false
-local jumpBtn = makeSwitch("AutoJump", Color3.fromRGB(190,255,120), 244)
-jumpBtn.MouseButton1Click:Connect(function()
-    autojump = not autojump
-    jumpBtn.Text = "AutoJump: " .. (autojump and "ON" or "OFF")
-    jumpBtn.TextColor3 = autojump and ACCENT or Color3.fromRGB(190,255,120)
-end)
-
-local invis = false
-local invisBtn = makeSwitch("Invisible", Color3.fromRGB(200,200,230), 274)
-invisBtn.MouseButton1Click:Connect(function()
-    invis = not invis
-    invisBtn.Text = "Invisible: " .. (invis and "ON" or "OFF")
-    invisBtn.TextColor3 = invis and ACCENT or Color3.fromRGB(200,200,230)
-    if lp.Character then
-        for _,v in pairs(lp.Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.Transparency = invis and 1 or 0
-            end
-        end
-    end
-end)
-
-local respawnBtn = makeAction("Respawn", WHITE, 214)
-respawnBtn.MouseButton1Click:Connect(function()
-    if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
-        lp.Character:FindFirstChildOfClass("Humanoid").Health = 0
-    end
-end)
-
-local hidename = false
-local hidenameBtn = makeSwitch("Hide Name", Color3.fromRGB(130,140,255), 304)
-hidenameBtn.MouseButton1Click:Connect(function()
-    hidename = not hidename
-    hidenameBtn.Text = "Hide Name: " .. (hidename and "ON" or "OFF")
-    hidenameBtn.TextColor3 = hidename and ACCENT or Color3.fromRGB(130,140,255)
-    for _,v in pairs(lp.Character:GetDescendants()) do
-        if v:IsA("BillboardGui") and v.Name:lower():find("name") then
-            v.Enabled = not hidename
-        end
-    end
-end)
-
--- WalkSpeed/JumpPower
-local wsBtn = makeAction("Speed+", WHITE, 244)
-local wsBtn2 = makeAction("Speed-", WHITE, 274)
-local jpBtn = makeAction("Jump+", WHITE, 304)
-local jpBtn2 = makeAction("Jump-", WHITE, 334)
-wsBtn.MouseButton1Click:Connect(function()
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = hum.WalkSpeed + 8 end
-end)
-wsBtn2.MouseButton1Click:Connect(function()
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.WalkSpeed = math.max(8, hum.WalkSpeed - 8) end
-end)
-jpBtn.MouseButton1Click:Connect(function()
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.JumpPower = hum.JumpPower + 10 end
-end)
-jpBtn2.MouseButton1Click:Connect(function()
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then hum.JumpPower = math.max(20, hum.JumpPower - 10) end
-end)
-
--- Bring Player (FE method: teleport yourself to them then quick bring, effect only for you)
-local bringBtn = makeAction("Bring Player", WHITE, 364)
-bringBtn.MouseButton1Click:Connect(function()
+-- Teleport to Player btn
+local tpBtn = Instance.new("TextButton", dialog)
+tpBtn.Position = UDim2.new(0.5,-62,0,158)
+tpBtn.Size = UDim2.new(0,124,0,26)
+tpBtn.Text = "Teleport to Player"
+tpBtn.Font = Enum.Font.GothamBold
+tpBtn.BackgroundColor3 = ACCENT
+tpBtn.TextColor3 = WHITE
+tpBtn.TextSize = 15
+tpBtn.BorderSizePixel = 0
+local tpCorner = Instance.new("UICorner", tpBtn)
+tpCorner.CornerRadius = UDim.new(0,8)
+tpBtn.MouseButton1Click:Connect(function()
     local target = Players:FindFirstChild(selected.Text)
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        -- swap pos
-        local pos1 = lp.Character.HumanoidRootPart.Position
-        local pos2 = target.Character.HumanoidRootPart.Position
-        lp.Character.HumanoidRootPart.CFrame = CFrame.new(pos2 + Vector3.new(0,2,0))
-        task.wait(.2)
-        target.Character.HumanoidRootPart.CFrame = CFrame.new(pos1 + Vector3.new(0,2,0))
+        lp.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,2,0)
     end
 end)
 
--- Spam Sound (bell, dsb)
-local soundBtn = makeAction("Spam Sound", WHITE, 394)
-soundBtn.MouseButton1Click:Connect(function()
-    local s = Instance.new("Sound", workspace)
-    s.SoundId = "rbxassetid://138186576" -- bell
-    s.Volume = 5
-    s:Play()
-    game.Debris:AddItem(s,2)
+-- Godmode
+local godmode = false
+local godBtn = Instance.new("TextButton", dialog)
+godBtn.Position = UDim2.new(0,18,0,195)
+godBtn.Size = UDim2.new(0,140,0,28)
+godBtn.Text = "Godmode: OFF"
+godBtn.BackgroundColor3 = DARK
+godBtn.TextColor3 = BTN_OFF
+godBtn.Font = Enum.Font.GothamBold
+godBtn.TextSize = 15
+local godCorner = Instance.new("UICorner", godBtn)
+godCorner.CornerRadius = UDim.new(0,8)
+godBtn.MouseButton1Click:Connect(function()
+    godmode = not godmode
+    godBtn.Text = "Godmode: " .. (godmode and "ON" or "OFF")
+    godBtn.TextColor3 = godmode and BTN_ON or BTN_OFF
 end)
-
--- Fake Chat
-local fakeChatBtn = makeAction("Fake Chat", WHITE, 424)
-fakeChatBtn.MouseButton1Click:Connect(function()
-    local msg = "nxzott is pro!!"
-    local starterGui = game:GetService("StarterGui")
-    starterGui:SetCore("ChatMakeSystemMessage", {Text=msg, Color=ACCENT, Font=Enum.Font.SourceSansBold, FontSize=Enum.FontSize.Size24})
-end)
-
--- Glitch Camera
-local camBtn = makeAction("Glitch Cam", WHITE, 454)
-camBtn.MouseButton1Click:Connect(function()
-    local cam = workspace.CurrentCamera
-    for i=1,32 do
-        cam.CFrame = cam.CFrame * CFrame.Angles(0,math.rad(math.random(-2,2)),0)
-        task.wait(0.03)
+RS.Stepped:Connect(function()
+    if godmode and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character.Humanoid.Health = lp.Character.Humanoid.MaxHealth
+        pcall(function()
+            for _,v in ipairs(lp.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.Velocity = Vector3.zero v.RotVelocity = Vector3.zero end
+                if v.Name:lower():find("virus") or v.Name:lower():find("lava") then v:Destroy() end
+            end
+        end)
     end
 end)
 
--- Ragdoll
-local ragBtn = makeAction("Ragdoll", WHITE, 484)
-ragBtn.MouseButton1Click:Connect(function()
-    local char = lp.Character
-    if char then
-        for _,v in pairs(char:GetDescendants()) do
-            if v:IsA("Motor6D") then
-                v.Enabled = false
+-- Fling
+local flingLoop = false
+local function Fling(target)
+    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = lp.Character.HumanoidRootPart
+        hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,1,0)
+        wait(0.1)
+        hrp.Velocity = Vector3.new(0,80,0)
+        wait(0.1)
+        hrp.Velocity = Vector3.new(math.random(-200,200),180,math.random(-200,200))
+    end
+end
+
+local flingBtn = Instance.new("TextButton", dialog)
+flingBtn.Position = UDim2.new(0,175,0,195)
+flingBtn.Size = UDim2.new(0,140,0,28)
+flingBtn.Text = "Fling Target"
+flingBtn.BackgroundColor3 = DARK
+flingBtn.TextColor3 = BTN_ON
+flingBtn.Font = Enum.Font.GothamBold
+flingBtn.TextSize = 15
+local flingCorner = Instance.new("UICorner", flingBtn)
+flingCorner.CornerRadius = UDim.new(0,8)
+flingBtn.MouseButton1Click:Connect(function()
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt then Fling(tgt) end
+end)
+
+-- Loop Fling
+local loopFlingBtn = Instance.new("TextButton", dialog)
+loopFlingBtn.Position = UDim2.new(0,18,0,232)
+loopFlingBtn.Size = UDim2.new(1,-36,0,26)
+loopFlingBtn.Text = "Loop Fling: OFF"
+loopFlingBtn.BackgroundColor3 = DARK
+loopFlingBtn.TextColor3 = BTN_OFF
+loopFlingBtn.Font = Enum.Font.GothamBold
+loopFlingBtn.TextSize = 14
+local loopFlingCorner = Instance.new("UICorner", loopFlingBtn)
+loopFlingCorner.CornerRadius = UDim.new(0,8)
+loopFlingBtn.MouseButton1Click:Connect(function()
+    flingLoop = not flingLoop
+    loopFlingBtn.Text = "Loop Fling: " .. (flingLoop and "ON" or "OFF")
+    loopFlingBtn.TextColor3 = flingLoop and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.6) do
+        if flingLoop then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt then Fling(tgt) end
+        end
+    end
+end)()
+
+-- Loop Teleport
+local loopTp = false
+local loopTpBtn = Instance.new("TextButton", dialog)
+loopTpBtn.Position = UDim2.new(0,18,0,264)
+loopTpBtn.Size = UDim2.new(1,-36,0,26)
+loopTpBtn.Text = "Loop Teleport: OFF"
+loopTpBtn.BackgroundColor3 = DARK
+loopTpBtn.TextColor3 = BTN_OFF
+loopTpBtn.Font = Enum.Font.GothamBold
+loopTpBtn.TextSize = 14
+local loopTpCorner = Instance.new("UICorner", loopTpBtn)
+loopTpCorner.CornerRadius = UDim.new(0,8)
+loopTpBtn.MouseButton1Click:Connect(function()
+    loopTp = not loopTp
+    loopTpBtn.Text = "Loop Teleport: " .. (loopTp and "ON" or "OFF")
+    loopTpBtn.TextColor3 = loopTp and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.5) do
+        if loopTp then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                lp.Character.HumanoidRootPart.CFrame = tgt.Character.HumanoidRootPart.CFrame * CFrame.new(0,2,0)
             end
         end
     end
+end)()
+
+-- Noclip
+local noclip = false
+local noclipSwitch = Instance.new("TextButton", dialog)
+noclipSwitch.Position = UDim2.new(0,18,0,298)
+noclipSwitch.Size = UDim2.new(0,140,0,28)
+noclipSwitch.Text = "Noclip: OFF"
+noclipSwitch.BackgroundColor3 = DARK
+noclipSwitch.TextColor3 = BTN_OFF
+noclipSwitch.Font = Enum.Font.GothamBold
+noclipSwitch.TextSize = 15
+local noclipCorner = Instance.new("UICorner", noclipSwitch)
+noclipCorner.CornerRadius = UDim.new(0,8)
+noclipSwitch.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    noclipSwitch.Text = "Noclip: " .. (noclip and "ON" or "OFF")
+    noclipSwitch.TextColor3 = noclip and BTN_ON or BTN_OFF
 end)
-
--- Spam Sit
-local sitBtn = makeAction("Spam Sit", WHITE, 514)
-sitBtn.MouseButton1Click:Connect(function()
-    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        for i=1,5 do
-            hum.Sit = not hum.Sit
-            task.wait(0.15)
-        end
-    end
-end)
-
--- Freeze
-local freeze = false
-local freezeBtn = makeSwitch("Freeze", Color3.fromRGB(120,200,255), 334)
-freezeBtn.MouseButton1Click:Connect(function()
-    freeze = not freeze
-    freezeBtn.Text = "Freeze: " .. (freeze and "ON" or "OFF")
-    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        if freeze then
-            hrp.Anchored = true
-        else
-            hrp.Anchored = false
-        end
-    end
-end)
-
--- Fake Lag
-local lag = false
-local lagBtn = makeSwitch("Fake Lag", Color3.fromRGB(255,220,120), 364)
-lagBtn.MouseButton1Click:Connect(function()
-    lag = not lag
-    lagBtn.Text = "Fake Lag: " .. (lag and "ON" or "OFF")
-end)
-
--- Status
-local statusText = Instance.new("TextLabel")
-statusText.Parent = dialog
-statusText.Position = UDim2.new(0,16,0,545)
-statusText.Size = UDim2.new(1,-32,0,32)
-statusText.BackgroundTransparency = 1
-statusText.Text = ""
-statusText.TextColor3 = ACCENT
-statusText.Font = Enum.Font.Gotham
-statusText.TextSize = 15
-statusText.TextWrapped = true
-
--- Logic
 RS.Stepped:Connect(function()
     if noclip and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
         for _,v in pairs(lp.Character:GetDescendants()) do
@@ -486,135 +458,116 @@ RS.Stepped:Connect(function()
             end
         end
     end
-    if god and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
-        lp.Character:FindFirstChildOfClass("Humanoid").Health = 100
+end)
+
+-- Super Jump
+local jump = false
+local jumpBtn = Instance.new("TextButton", dialog)
+jumpBtn.Position = UDim2.new(0,175,0,298)
+jumpBtn.Size = UDim2.new(0,140,0,28)
+jumpBtn.Text = "Super Jump: OFF"
+jumpBtn.BackgroundColor3 = DARK
+jumpBtn.TextColor3 = BTN_OFF
+jumpBtn.Font = Enum.Font.GothamBold
+jumpBtn.TextSize = 15
+local jumpCorner = Instance.new("UICorner", jumpBtn)
+jumpCorner.CornerRadius = UDim.new(0,8)
+jumpBtn.MouseButton1Click:Connect(function()
+    jump = not jump
+    jumpBtn.Text = "Super Jump: " .. (jump and "ON" or "OFF")
+    jumpBtn.TextColor3 = jump and BTN_ON or BTN_OFF
+end)
+RS.RenderStepped:Connect(function()
+    if jump and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character.Humanoid.JumpPower = 150
+    elseif lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character.Humanoid.JumpPower = 50
     end
-    if autojump and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
-        lp.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+end)
+
+-- Speed
+local speed = false
+local speedBtn = Instance.new("TextButton", dialog)
+speedBtn.Position = UDim2.new(0,18,0,332)
+speedBtn.Size = UDim2.new(0,140,0,28)
+speedBtn.Text = "Speed: OFF"
+speedBtn.BackgroundColor3 = DARK
+speedBtn.TextColor3 = BTN_OFF
+speedBtn.Font = Enum.Font.GothamBold
+speedBtn.TextSize = 15
+local speedCorner = Instance.new("UICorner", speedBtn)
+speedCorner.CornerRadius = UDim.new(0,8)
+speedBtn.MouseButton1Click:Connect(function()
+    speed = not speed
+    speedBtn.Text = "Speed: " .. (speed and "ON" or "OFF")
+    speedBtn.TextColor3 = speed and BTN_ON or BTN_OFF
+end)
+RS.RenderStepped:Connect(function()
+    if speed and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character.Humanoid.WalkSpeed = 50
+    elseif lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character.Humanoid.WalkSpeed = 16
     end
-    if lag and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        for i=1,5 do
-            lp.Character.HumanoidRootPart.CFrame = lp.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,0.2)
+end)
+
+-- Bring All (TP semua pemain ke kamu)
+local bringBtn = Instance.new("TextButton", dialog)
+bringBtn.Position = UDim2.new(0,175,0,332)
+bringBtn.Size = UDim2.new(0,140,0,28)
+bringBtn.Text = "Bring All"
+bringBtn.BackgroundColor3 = DARK
+bringBtn.TextColor3 = BTN_ON
+bringBtn.Font = Enum.Font.GothamBold
+bringBtn.TextSize = 15
+local bringCorner = Instance.new("UICorner", bringBtn)
+bringCorner.CornerRadius = UDim.new(0,8)
+bringBtn.MouseButton1Click:Connect(function()
+    if not (lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")) then return end
+    local mypos = lp.Character.HumanoidRootPart.Position
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            plr.Character.HumanoidRootPart.CFrame = CFrame.new(mypos + Vector3.new(math.random(-2,2),3,math.random(-2,2)))
         end
     end
 end)
 
-local bv = nil
-RS.RenderStepped:Connect(function()
-    if fly and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        if not bv then
-            bv = Instance.new("BodyVelocity")
-            bv.Name = "FlyVelocity"
-            bv.MaxForce = Vector3.new(1e6,1e6,1e6)
-            bv.Parent = lp.Character.HumanoidRootPart
-        end
-        local moveVec = Vector3.new()
-        if UIS.TouchEnabled then
-            moveVec = (lp.Character.HumanoidRootPart.CFrame.LookVector) * 25
-            if UIS:IsKeyDown(Enum.KeyCode.Space) then moveVec = moveVec + Vector3.new(0,20,0) end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveVec = moveVec - Vector3.new(0,20,0) end
+-- Freeze/Unfreeze Player
+local freeze = false
+local freezeBtn = Instance.new("TextButton", dialog)
+freezeBtn.Position = UDim2.new(0,18,0,366)
+freezeBtn.Size = UDim2.new(1,-36,0,28)
+freezeBtn.Text = "Freeze Target: OFF"
+freezeBtn.BackgroundColor3 = DARK
+freezeBtn.TextColor3 = BTN_OFF
+freezeBtn.Font = Enum.Font.GothamBold
+freezeBtn.TextSize = 15
+local freezeCorner = Instance.new("UICorner", freezeBtn)
+freezeCorner.CornerRadius = UDim.new(0,8)
+freezeBtn.MouseButton1Click:Connect(function()
+    freeze = not freeze
+    freezeBtn.Text = "Freeze Target: " .. (freeze and "ON" or "OFF")
+    freezeBtn.TextColor3 = freeze and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.5) do
+        if freeze then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
+                tgt.Character.HumanoidRootPart.Anchored = true
+            end
         else
-            if UIS:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + workspace.CurrentCamera.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - workspace.CurrentCamera.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - workspace.CurrentCamera.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + workspace.CurrentCamera.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.Space) then moveVec = moveVec + Vector3.new(0,1,0) end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveVec = moveVec - Vector3.new(0,1,0) end
-            moveVec = moveVec * 25
-        end
-        bv.Velocity = moveVec
-    elseif bv then
-        bv:Destroy()
-        bv = nil
-    end
-end)
-
--- Disaster Info (update + auto)
-local function getDisaster()
-    local disasterName = "(unknown)"
-    local ds = Rep:FindFirstChild("Disaster") or workspace:FindFirstChild("Disaster")
-    if ds and ds:FindFirstChild("Name") then
-        disasterName = ds.Name.Value or ds.Name.Name
-    else
-        for _,v in pairs(workspace:GetChildren()) do
-            if v:IsA("Model") and v.Name:lower():find("disaster") then
-                disasterName = v.Name
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
+                tgt.Character.HumanoidRootPart.Anchored = false
             end
         end
     end
-    if Rep:FindFirstChild("CurrentDisaster") and Rep.CurrentDisaster.Value ~= "" then
-        disasterName = tostring(Rep.CurrentDisaster.Value)
-    end
-    return disasterName
-end
+end)()
 
-RS.RenderStepped:Connect(function()
-    disasterLabel.Text = "Disaster: " .. getDisaster()
-end)
-
-safeBtn.MouseButton1Click:Connect(function()
-    local disaster = getDisaster():lower()
-    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local safeY = 60
-    if disaster:find("flood") then
-        hrp.CFrame = CFrame.new(hrp.Position.X, safeY, hrp.Position.Z)
-        statusText.Text = "Naik ke atas (flood)"
-    elseif disaster:find("volcano") then
-        hrp.CFrame = CFrame.new(hrp.Position.X+50, hrp.Position.Y+15, hrp.Position.Z+50)
-        statusText.Text = "Teleport menjauh (volcano)"
-    elseif disaster:find("thunder") then
-        hrp.CFrame = CFrame.new(hrp.Position.X, 2, hrp.Position.Z)
-        statusText.Text = "Turun (thunder)"
-    elseif disaster:find("tornado") then
-        hrp.CFrame = CFrame.new(hrp.Position.X-75, hrp.Position.Y+5, hrp.Position.Z-75)
-        statusText.Text = "Menjauh dari tornado"
-    elseif disaster:find("fire") then
-        hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y+25, hrp.Position.Z)
-        statusText.Text = "Naik ke atas (fire)"
-    else
-        hrp.CFrame = CFrame.new(hrp.Position.X, safeY, hrp.Position.Z)
-        statusText.Text = "Naik ke atas (umum)"
-    end
-end)
-
-tpPlayerBtn.MouseButton1Click:Connect(function()
-    local target = Players:FindFirstChild(selected.Text)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        lp.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,2,0)
-        statusText.Text = "Teleport ke " .. target.Name
-    end
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-    dialog.Visible = false
-    statusText.Text = ""
-end)
-
+-- Menu toggle
 menuBtn.MouseButton1Click:Connect(function()
-    dialog.Visible = not dialog.Visible
+    if not dialog.Visible then showDialog() else hideDialog() end
 end)
+closeBtn.MouseButton1Click:Connect(hideDialog)
 
-if UIS.GamepadEnabled and not UIS.TouchEnabled then
-    gui.Enabled = false
-end
-
-lp.CharacterAdded:Connect(function(char)
-    wait(1)
-    if hidename then
-        for _,v in pairs(char:GetDescendants()) do
-            if v:IsA("BillboardGui") and v.Name:lower():find("name") then
-                v.Enabled = false
-            end
-        end
-    end
-    if invis then
-        for _,v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.Transparency = 1
-            end
-        end
-    end
-end)
-
--- END
+-- End
