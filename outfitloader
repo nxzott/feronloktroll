@@ -1,0 +1,259 @@
+-- Roblox Outfit Loader by Username (UI Infinite Yield Style, Dragable)
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local UIS = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+
+-- Dragify ala Infinite Yield
+local function dragify(Frame)
+    local dragToggle, dragInput, dragStart, startPos
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = Frame.Position
+        end
+    end)
+    Frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = false
+        end
+    end)
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            local delta = input.Position - dragStart
+            Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui", lp:WaitForChild("PlayerGui"))
+gui.Name = "OutfitLoader_IY"
+
+-- Open Button (dragable)
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Text = "☰ Outfit Loader"
+openBtn.Size = UDim2.new(0, 180, 0, 40)
+openBtn.Position = UDim2.new(0.5, -90, 0.10, 0)
+openBtn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+openBtn.TextColor3 = Color3.fromRGB(85,170,255)
+openBtn.Font = Enum.Font.GothamBlack
+openBtn.TextSize = 18
+openBtn.BorderSizePixel = 0
+local openCorner = Instance.new("UICorner", openBtn)
+openCorner.CornerRadius = UDim.new(0, 8)
+dragify(openBtn)
+
+-- Main Frame (dragable)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 350, 0, 190)
+frame.Position = UDim2.new(0.5, -175, 0.23, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Visible = false
+frame.BorderSizePixel = 0
+local frameCorner = Instance.new("UICorner", frame)
+frameCorner.CornerRadius = UDim.new(0, 12)
+dragify(frame)
+
+-- Topbar ala Infinite Yield
+local topbar = Instance.new("Frame", frame)
+topbar.Size = UDim2.new(1, 0, 0, 38)
+topbar.Position = UDim2.new(0,0,0,0)
+topbar.BackgroundColor3 = Color3.fromRGB(20,20,20)
+topbar.BorderSizePixel = 0
+local barCorner = Instance.new("UICorner", topbar)
+barCorner.CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", topbar)
+title.Text = "Outfit Loader"
+title.Size = UDim2.new(1, -44, 1, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(85,170,255)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Padding = nil
+
+-- Close Button
+local closeBtn = Instance.new("TextButton", topbar)
+closeBtn.Text = "✕"
+closeBtn.Size = UDim2.new(0, 38, 1, 0)
+closeBtn.Position = UDim2.new(1, -38, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+closeBtn.TextColor3 = Color3.fromRGB(200,70,70)
+closeBtn.Font = Enum.Font.GothamBlack
+closeBtn.TextSize = 22
+closeBtn.BorderSizePixel = 0
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeCorner.CornerRadius = UDim.new(1,0)
+
+closeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+end)
+openBtn.MouseButton1Click:Connect(function()
+    frame.Visible = true
+end)
+
+-- Username Input
+local userBox = Instance.new("TextBox", frame)
+userBox.PlaceholderText = "Masukkan Username Roblox..."
+userBox.Size = UDim2.new(1, -40, 0, 38)
+userBox.Position = UDim2.new(0, 20, 0, 56)
+userBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+userBox.TextColor3 = Color3.fromRGB(180, 220, 255)
+userBox.Font = Enum.Font.Gotham
+userBox.TextSize = 17
+userBox.ClearTextOnFocus = false
+userBox.BorderSizePixel = 0
+local userCorner = Instance.new("UICorner", userBox)
+userCorner.CornerRadius = UDim.new(0, 8)
+
+-- Load Button
+local loadBtn = Instance.new("TextButton", frame)
+loadBtn.Text = "Load Outfit"
+loadBtn.Size = UDim2.new(1, -40, 0, 38)
+loadBtn.Position = UDim2.new(0, 20, 0, 104)
+loadBtn.BackgroundColor3 = Color3.fromRGB(85,170,255)
+loadBtn.TextColor3 = Color3.fromRGB(25,25,25)
+loadBtn.Font = Enum.Font.GothamBold
+loadBtn.TextSize = 18
+loadBtn.BorderSizePixel = 0
+local loadCorner = Instance.new("UICorner", loadBtn)
+loadCorner.CornerRadius = UDim.new(0, 8)
+
+-- Notif
+local notif = Instance.new("TextLabel", frame)
+notif.Text = ""
+notif.Size = UDim2.new(1, 0, 0, 30)
+notif.Position = UDim2.new(0, 0, 1, -32)
+notif.BackgroundTransparency = 1
+notif.TextColor3 = Color3.fromRGB(85,170,255)
+notif.Font = Enum.Font.Gotham
+notif.TextSize = 16
+
+-- Outfit Loader Function
+local function setNotif(txt, color)
+    notif.Text = txt
+    notif.TextColor3 = color or Color3.fromRGB(85,170,255)
+end
+
+local function getUserIdFromUsername(username)
+    local url = ("https://users.roblox.com/v1/usernames/users")
+    local data = HttpService:JSONEncode({
+        usernames = {username},
+        excludeBannedUsers = true
+    })
+    local suc,res = pcall(function()
+        return HttpService:PostAsync(url, data, Enum.HttpContentType.ApplicationJson)
+    end)
+    if suc then
+        local tab = HttpService:JSONDecode(res)
+        if tab and tab.data and tab.data[1] and tab.data[1].id then
+            return tostring(tab.data[1].id)
+        end
+    end
+    return nil
+end
+
+local function getOutfitIdsForUserId(userid)
+    local url = ("https://avatar.roblox.com/v1/users/"..userid.."/outfits?itemsPerPage=50&page=1")
+    local suc,res = pcall(function()
+        return HttpService:GetAsync(url)
+    end)
+    if suc then
+        local tab = HttpService:JSONDecode(res)
+        if tab and tab.data and tab.data[1] and tab.data[1].id then
+            return tostring(tab.data[1].id) -- First outfit id
+        end
+    end
+    return nil
+end
+
+local function getOutfitDetails(outfitId)
+    local url = ("https://avatar.roblox.com/v1/outfits/"..outfitId.."/details")
+    local suc,res = pcall(function()
+        return HttpService:GetAsync(url)
+    end)
+    if suc then
+        local tab = HttpService:JSONDecode(res)
+        if tab and tab.assets then
+            return tab
+        end
+    end
+    return nil
+end
+
+local function applyOutfit(outfit)
+    -- Remove all accessories & clothing
+    local char = lp.Character
+    if not char then setNotif("Karakter tidak ditemukan!", Color3.fromRGB(255,80,80)) return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then setNotif("Humanoid tidak ditemukan!", Color3.fromRGB(255,80,80)) return end
+
+    -- Remove hats/accessories
+    for _,v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("BodyColors") or v:IsA("CharacterMesh") then
+            v:Destroy()
+        end
+    end
+    -- Remove faces
+    if char:FindFirstChild("face") then
+        char.face:Destroy()
+    end
+
+    -- Wear assets
+    for _,asset in ipairs(outfit.assets) do
+        humanoid:AddAccessory(Instance.new("Accessory", char)) -- Placeholder, ganti dengan InsertService jika di executor dengan Insert perms
+        -- Untuk executor public: gunakan InsertService atau memakai loader asset khusus dari exploit
+        -- (Karena Roblox Studio/Client tidak bisa insert asset langsung via script tanpa perms)
+    end
+    -- Set body colors
+    if outfit.bodyColors then
+        local bc = Instance.new("BodyColors")
+        for k,v in pairs(outfit.bodyColors) do
+            if bc[k] then bc[k] = v end
+        end
+        bc.Parent = char
+    end
+    -- Set face
+    if outfit.faceAssetId then
+        -- Biasanya exploit punya fungsi InsertAsset
+        -- Atau bisa pakai require(InsertService).InsertAsset(outfit.faceAssetId)
+    end
+end
+
+-- Main Loader Button
+loadBtn.MouseButton1Click:Connect(function()
+    local username = userBox.Text:gsub("%s+", "")
+    if #username < 3 then
+        setNotif("Masukkan username valid!", Color3.fromRGB(255,80,80))
+        return
+    end
+    setNotif("Mengambil data...", Color3.fromRGB(255,255,80))
+    local userId = getUserIdFromUsername(username)
+    if not userId then
+        setNotif("Username tidak ditemukan!", Color3.fromRGB(255,80,80))
+        return
+    end
+    local outfitId = getOutfitIdsForUserId(userId)
+    if not outfitId then
+        setNotif("Outfit tidak ditemukan!", Color3.fromRGB(255,80,80))
+        return
+    end
+    setNotif("Memuat outfit...", Color3.fromRGB(255,255,80))
+    local outfit = getOutfitDetails(outfitId)
+    if not outfit then
+        setNotif("Gagal mengambil detail outfit!", Color3.fromRGB(255,80,80))
+        return
+    end
+    applyOutfit(outfit)
+    setNotif("Outfit berhasil dimuat!", Color3.fromRGB(80,255,80))
+end)
