@@ -1,0 +1,198 @@
+-- Roblox Universal Emote Modmenu (R6 & R15, Drag, GUI always open button)
+
+local emotes = {
+    {name="wave",      r15="rbxassetid://507770239",   r6="rbxassetid://128777973"},
+    {name="point",     r15="rbxassetid://507770453",   r6="rbxassetid://128853357"},
+    {name="cheer",     r15="rbxassetid://507770677",   r6="rbxassetid://129423131"},
+    {name="laugh",     r15="rbxassetid://507770818",   r6="rbxassetid://129423030"},
+    {name="dance",     r15="rbxassetid://507771019",   r6="rbxassetid://182435998"}, -- dance1
+    {name="dance2",    r15="rbxassetid://507776043",   r6="rbxassetid://182436842"},
+    {name="dance3",    r15="rbxassetid://507777268",   r6="rbxassetid://182436935"},
+    {name="shrug",     r15="rbxassetid://507785023",   r6="rbxassetid://138017960"},
+    {name="salute",    r15="rbxassetid://507770239",   r6="rbxassetid://128777973"}, -- fallback
+    {name="tilt",      r15="rbxassetid://3152375246",  r6="rbxassetid://3152378852"},
+    {name="hello",     r15="rbxassetid://4849482296",  r6="rbxassetid://4849482296"},
+}
+
+local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "EmoteModmenu"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Open button (SELALU ADA)
+local openBtn = Instance.new("TextButton")
+openBtn.Name = "OpenEmoteMenu"
+openBtn.Size = UDim2.new(0, 170, 0, 44)
+openBtn.Position = UDim2.new(0.5, -85, 0.05, 0)
+openBtn.Text = "☰ Emote Modmenu"
+openBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+openBtn.TextColor3 = Color3.fromRGB(255,255,255)
+openBtn.Font = Enum.Font.GothamBold
+openBtn.TextSize = 20
+openBtn.AutoButtonColor = true
+openBtn.Parent = gui
+local openCorner = Instance.new("UICorner", openBtn)
+openCorner.CornerRadius = UDim.new(1,0)
+
+-- Modmenu main frame (mulai tengah layar)
+local frame = Instance.new("Frame")
+frame.Name = "MainMenu"
+frame.Size = UDim2.new(0, 340, 0, (#emotes * 40) + 120)
+frame.Position = UDim2.new(0.5, -170, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(38, 50, 56)
+frame.Visible = false
+frame.Parent = gui
+local mainCorner = Instance.new("UICorner", frame)
+mainCorner.CornerRadius = UDim.new(0, 16)
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 3
+stroke.Color = Color3.fromRGB(0, 170, 255)
+stroke.Transparency = 0.25
+
+-- Judul (bisa drag)
+local title = Instance.new("TextLabel", frame)
+title.Name = "TitleBar"
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0,0,0,0)
+title.Text = "Universal Emote Modmenu"
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(0, 220, 255)
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 22
+
+-- Tombol X (tutup menu)
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -45, 0, 5)
+closeBtn.Text = "✕"
+closeBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+closeBtn.Font = Enum.Font.GothamBlack
+closeBtn.TextSize = 22
+closeBtn.AutoButtonColor = true
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeCorner.CornerRadius = UDim.new(1,0)
+closeBtn.ZIndex = 5
+
+closeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    openBtn.Visible = true
+end)
+
+openBtn.MouseButton1Click:Connect(function()
+    frame.Visible = true
+    --openBtn.Visible = false -- Jangan disembunyikan!
+end)
+
+-- Scroll list
+local scroll = Instance.new("ScrollingFrame", frame)
+scroll.Size = UDim2.new(1, -32, 1, -110)
+scroll.Position = UDim2.new(0, 16, 0, 48)
+scroll.CanvasSize = UDim2.new(0,0,0,#emotes * 44)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 6
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0, 6)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- Fungsi emote universal
+local function playEmote(emoteData)
+    local char = player.Character
+    if not char or not char:FindFirstChildWhichIsA("Humanoid") then return end
+    local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+    -- Detect rig type
+    local rigType = humanoid.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
+    -- Stop all previous emotes
+    for _, tr in ipairs(humanoid:GetPlayingAnimationTracks()) do
+        tr:Stop()
+    end
+    -- Prioritaskan chat command jika didukung
+    local success = pcall(function()
+        game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("/e " .. emoteData.name, "All")
+    end)
+    -- Jika chat command gagal atau tidak support, mainkan animasi manual
+    local animId = rigType == "R15" and emoteData.r15 or emoteData.r6
+    local anim = Instance.new("Animation")
+    anim.AnimationId = animId
+    local track = humanoid:LoadAnimation(anim)
+    track.Priority = Enum.AnimationPriority.Action
+    track:Play()
+end
+
+for i, emoteData in ipairs(emotes) do
+    local btn = Instance.new("TextButton", scroll)
+    btn.Size = UDim2.new(1, -8, 0, 38)
+    btn.Text = "•  " .. emoteData.name:upper()
+    btn.BackgroundColor3 = Color3.fromRGB(0, 140, 220)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    btn.AutoButtonColor = true
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(1,0)
+    btn.MouseButton1Click:Connect(function()
+        playEmote(emoteData)
+    end)
+end
+
+-- Tombol stop emote
+local stopBtn = Instance.new("TextButton", frame)
+stopBtn.Size = UDim2.new(1, -32, 0, 40)
+stopBtn.Position = UDim2.new(0, 16, 1, -50)
+stopBtn.Text = "■  STOP EMOTE"
+stopBtn.BackgroundColor3 = Color3.fromRGB(220, 90, 90)
+stopBtn.TextColor3 = Color3.fromRGB(255,255,255)
+stopBtn.Font = Enum.Font.GothamBold
+stopBtn.TextSize = 19
+stopBtn.AutoButtonColor = true
+local stopCorner = Instance.new("UICorner", stopBtn)
+stopCorner.CornerRadius = UDim.new(1,0)
+stopBtn.ZIndex = 5
+
+stopBtn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChildWhichIsA("Humanoid") then
+        for _, tr in ipairs(char:FindFirstChildWhichIsA("Humanoid"):GetPlayingAnimationTracks()) do
+            tr:Stop()
+        end
+    end
+end)
+
+-- Drag support (drag frame via titlebar)
+local dragging, dragStart, startPos
+local function beginDrag(input)
+    dragging = true
+    dragStart = input.Position
+    startPos = frame.Position
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+        end
+    end)
+end
+local function updateDrag(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        beginDrag(input)
+    end
+end)
+title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+        updateDrag(input)
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+        updateDrag(input)
+    end
+end)
