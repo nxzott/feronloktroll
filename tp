@@ -1,10 +1,10 @@
--- Roblox Mod Menu Teleport (Mobile & PC) - Drag & Drop Circular UI
--- By Copilot, request by nxzott
+-- Roblox Mod Menu Teleport - Improved Version (Mobile & PC)
+-- By Copilot, update for nxzott
 
 -- CONFIGURATIONS
-local MODMENU_SIZE = 70 -- px (button diameter)
-local MODMENU_POS_Y = 30 -- px from top
-local DIALOG_SIZE = UDim2.new(0, 330, 0, 370)
+local BTN_SIZE = 48 -- button diameter (smaller)
+local BTN_POS_Y = 16 -- closer to top
+local DIALOG_SIZE = UDim2.new(0, 320, 0, 340)
 local RGBCycleSpeed = 2 -- seconds per color loop
 
 if not game:IsLoaded() then game.Loaded:Wait() end
@@ -13,13 +13,10 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 
 local lp = Players.LocalPlayer
-
--- Check Platform
-local isMobile = UserInputService.TouchEnabled
-local isPC = not isMobile
 
 -- Remove previous menu if exists
 if game.CoreGui:FindFirstChild("CoolModMenu") then
@@ -69,27 +66,23 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = game:GetService("CoreGui")
 
--- Main ModMenu Button (Circle)
+-- Main ModMenu Button (Circle, small, no RGB)
 local menuBtn = Instance.new("ImageButton")
 menuBtn.Name = "ModMenuBtn"
 menuBtn.AnchorPoint = Vector2.new(0.5,0)
-menuBtn.Position = UDim2.new(0.5, 0, 0, MODMENU_POS_Y)
-menuBtn.Size = UDim2.new(0, MODMENU_SIZE, 0, MODMENU_SIZE)
+menuBtn.Position = UDim2.new(0.5, 0, 0, BTN_POS_Y)
+menuBtn.Size = UDim2.new(0, BTN_SIZE, 0, BTN_SIZE)
 menuBtn.BackgroundTransparency = 1
 menuBtn.Image = "rbxassetid://3570695787"
 menuBtn.ImageColor3 = Color3.new(0,0,0)
 menuBtn.Parent = gui
 
--- RGB Accent
-local accent = Instance.new("UIStroke", menuBtn)
-accent.Thickness = 3
-
 -- Icon
 local icon = Instance.new("ImageLabel")
 icon.Parent = menuBtn
 icon.BackgroundTransparency = 1
-icon.Size = UDim2.new(0.5,0,0.5,0)
-icon.Position = UDim2.new(0.25,0,0.25,0)
+icon.Size = UDim2.new(0.7,0,0.7,0)
+icon.Position = UDim2.new(0.15,0,0.15,0)
 icon.Image = "rbxassetid://6035047409" -- teleport icon
 
 -- Drag & Drop
@@ -98,32 +91,33 @@ makeDraggable(menuBtn)
 -- Dialog Menu UI
 local dialog = Instance.new("Frame")
 dialog.Name = "Dialog"
-dialog.Position = UDim2.new(0.5, -DIALOG_SIZE.X.Offset/2, 0.15, 0)
+dialog.Position = UDim2.new(0.5, -DIALOG_SIZE.X.Offset/2, 0.13, 0)
 dialog.Size = DIALOG_SIZE
 dialog.BackgroundColor3 = Color3.new(0.1,0.1,0.1)
-dialog.BackgroundTransparency = 0.15
+dialog.BackgroundTransparency = 0.12
 dialog.Visible = false
 dialog.Parent = gui
 dialog.AnchorPoint = Vector2.new(0,0)
 dialog.Active = true
 dialog.ClipsDescendants = true
 
--- Dialog Accent
+-- Dialog RGB Accent
 local dialogStroke = Instance.new("UIStroke", dialog)
 dialogStroke.Thickness = 3
 dialogStroke.Color = Color3.fromRGB(255,0,0)
 
 makeDraggable(dialog)
 
--- Close Button
+-- Close Button (small)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Parent = dialog
-closeBtn.Position = UDim2.new(1, -38, 0, 8)
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -34, 0, 6)
+closeBtn.Size = UDim2.new(0, 28, 0, 28)
 closeBtn.Text = "⨉"
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
 closeBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+closeBtn.BackgroundTransparency = 0.12
 closeBtn.AutoButtonColor = true
 closeBtn.BorderSizePixel = 0
 closeBtn.ZIndex = 2
@@ -132,61 +126,109 @@ closeBtn.ZIndex = 2
 local title = Instance.new("TextLabel")
 title.Parent = dialog
 title.Position = UDim2.new(0, 0, 0, 8)
-title.Size = UDim2.new(1, 0, 0, 35)
+title.Size = UDim2.new(1, 0, 0, 32)
 title.Text = "ModMenu - Teleport"
 title.Font = Enum.Font.GothamBold
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 title.TextScaled = true
 
--- Input Username
-local userLabel = Instance.new("TextLabel")
-userLabel.Parent = dialog
-userLabel.Position = UDim2.new(0,20,0,48)
-userLabel.Size = UDim2.new(0,100,0,28)
-userLabel.BackgroundTransparency = 1
-userLabel.Text = "Username:"
-userLabel.TextColor3 = Color3.fromRGB(180,180,180)
-userLabel.Font = Enum.Font.Gotham
-userLabel.TextXAlignment = Enum.TextXAlignment.Left
-userLabel.TextSize = 18
+-- Dropdown Player Picker
+local playerLabel = Instance.new("TextLabel")
+playerLabel.Parent = dialog
+playerLabel.Position = UDim2.new(0,16,0,46)
+playerLabel.Size = UDim2.new(0,110,0,28)
+playerLabel.BackgroundTransparency = 1
+playerLabel.Text = "Target:"
+playerLabel.TextColor3 = Color3.fromRGB(180,180,180)
+playerLabel.Font = Enum.Font.Gotham
+playerLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerLabel.TextSize = 17
 
-local userInput = Instance.new("TextBox")
-userInput.Parent = dialog
-userInput.Position = UDim2.new(0,120,0,48)
-userInput.Size = UDim2.new(0,180,0,28)
-userInput.PlaceholderText = "Player Name"
-userInput.Text = ""
-userInput.Font = Enum.Font.Gotham
-userInput.TextColor3 = Color3.fromRGB(255,255,255)
-userInput.BackgroundColor3 = Color3.fromRGB(30,30,30)
-userInput.ClearTextOnFocus = false
-userInput.TextSize = 17
+local dropdown = Instance.new("Frame")
+dropdown.Parent = dialog
+dropdown.Position = UDim2.new(0,85,0,46)
+dropdown.Size = UDim2.new(0, 200, 0, 28)
+dropdown.BackgroundColor3 = Color3.fromRGB(30,30,30)
+dropdown.BorderSizePixel = 0
+
+local selected = Instance.new("TextButton")
+selected.Parent = dropdown
+selected.Size = UDim2.new(1,0,1,0)
+selected.BackgroundTransparency = 1
+selected.TextColor3 = Color3.new(1,1,1)
+selected.Text = ""
+selected.Font = Enum.Font.Gotham
+selected.TextSize = 17
+
+local dropList = Instance.new("ScrollingFrame")
+dropList.Parent = dropdown
+dropList.Size = UDim2.new(1,0,0,0)
+dropList.Position = UDim2.new(0,0,1,0)
+dropList.CanvasSize = UDim2.new(0,0,0,0)
+dropList.Visible = false
+dropList.BackgroundColor3 = Color3.fromRGB(40,40,40)
+dropList.BorderSizePixel = 0
+dropList.ScrollBarThickness = 4
+dropList.ZIndex = 10
+
+local function refreshDropdown()
+    dropList:ClearAllChildren()
+    local players = {}
+    for _,v in ipairs(Players:GetPlayers()) do
+        if v ~= lp then table.insert(players, v) end
+    end
+    dropList.CanvasSize = UDim2.new(0,0,0,#players * 26)
+    dropList.Size = UDim2.new(1,0,0,#players > 5 and 130 or #players*26)
+    for i,plr in ipairs(players) do
+        local btn = Instance.new("TextButton")
+        btn.Parent = dropList
+        btn.Size = UDim2.new(1,0,0,26)
+        btn.Position = UDim2.new(0,0,0,(i-1)*26)
+        btn.BackgroundTransparency = 1
+        btn.Text = plr.Name
+        btn.Font = Enum.Font.Gotham
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.TextSize = 16
+        btn.ZIndex = 11
+        btn.MouseButton1Click:Connect(function()
+            selected.Text = plr.Name
+            dropList.Visible = false
+        end)
+    end
+end
+refreshDropdown()
+Players.PlayerAdded:Connect(refreshDropdown)
+Players.PlayerRemoving:Connect(refreshDropdown)
+
+selected.MouseButton1Click:Connect(function()
+    dropList.Visible = not dropList.Visible
+end)
 
 -- Teleport Mode Switch
 local modeLabel = Instance.new("TextLabel")
 modeLabel.Parent = dialog
-modeLabel.Position = UDim2.new(0,20,0,88)
-modeLabel.Size = UDim2.new(0,110,0,28)
+modeLabel.Position = UDim2.new(0,16,0,82)
+modeLabel.Size = UDim2.new(0,70,0,25)
 modeLabel.BackgroundTransparency = 1
 modeLabel.Text = "Mode:"
 modeLabel.TextColor3 = Color3.fromRGB(180,180,180)
 modeLabel.Font = Enum.Font.Gotham
 modeLabel.TextXAlignment = Enum.TextXAlignment.Left
-modeLabel.TextSize = 18
+modeLabel.TextSize = 16
 
 local modeList = {"Teleport Once", "Sit On Shoulder", "Always Teleport"}
 local mode = 1
 
 local modeSwitch = Instance.new("TextButton")
 modeSwitch.Parent = dialog
-modeSwitch.Position = UDim2.new(0,135,0,88)
-modeSwitch.Size = UDim2.new(0,180,0,28)
+modeSwitch.Position = UDim2.new(0,85,0,82)
+modeSwitch.Size = UDim2.new(0,200,0,25)
 modeSwitch.Text = modeList[mode]
 modeSwitch.Font = Enum.Font.GothamBold
 modeSwitch.BackgroundColor3 = Color3.fromRGB(40,40,40)
 modeSwitch.TextColor3 = Color3.fromRGB(0,255,165)
-modeSwitch.TextSize = 16
+modeSwitch.TextSize = 15
 
 modeSwitch.MouseButton1Click:Connect(function()
     mode = mode + 1
@@ -197,33 +239,33 @@ end)
 -- Teleport Button
 local teleBtn = Instance.new("TextButton")
 teleBtn.Parent = dialog
-teleBtn.Position = UDim2.new(0.5, -80, 0, 135)
-teleBtn.Size = UDim2.new(0,160,0,38)
+teleBtn.Position = UDim2.new(0.5, -75, 0, 120)
+teleBtn.Size = UDim2.new(0,150,0,34)
 teleBtn.Text = "TELEPORT"
 teleBtn.Font = Enum.Font.GothamBlack
 teleBtn.TextColor3 = Color3.new(1,1,1)
 teleBtn.BackgroundColor3 = Color3.fromRGB(0,110,255)
-teleBtn.TextSize = 20
+teleBtn.TextSize = 19
 teleBtn.BorderSizePixel = 0
 
 -- Status
 local statusText = Instance.new("TextLabel")
 statusText.Parent = dialog
-statusText.Position = UDim2.new(0,20,0,188)
-statusText.Size = UDim2.new(1,-40,0,30)
+statusText.Position = UDim2.new(0,15,0,160)
+statusText.Size = UDim2.new(1,-30,0,28)
 statusText.BackgroundTransparency = 1
 statusText.Text = ""
 statusText.TextColor3 = Color3.fromRGB(120,255,120)
 statusText.Font = Enum.Font.Gotham
-statusText.TextSize = 16
+statusText.TextSize = 15
 statusText.TextWrapped = true
 
--- Extra Feature: Noclip Switch
+-- Extra: Noclip
 local noclip = false
 local noclipSwitch = Instance.new("TextButton")
 noclipSwitch.Parent = dialog
-noclipSwitch.Position = UDim2.new(0,20,0,230)
-noclipSwitch.Size = UDim2.new(0,140,0,32)
+noclipSwitch.Position = UDim2.new(0,15,0,196)
+noclipSwitch.Size = UDim2.new(0,130,0,28)
 noclipSwitch.Text = "Noclip: OFF"
 noclipSwitch.BackgroundColor3 = Color3.fromRGB(30,30,30)
 noclipSwitch.TextColor3 = Color3.fromRGB(255,120,120)
@@ -236,12 +278,12 @@ noclipSwitch.MouseButton1Click:Connect(function()
     noclipSwitch.TextColor3 = noclip and Color3.fromRGB(30,255,180) or Color3.fromRGB(255,120,120)
 end)
 
--- Extra Feature: Fly Switch (Mobile/PC only, using BodyVelocity)
+-- Extra: Fly
 local fly = false
 local flySwitch = Instance.new("TextButton")
 flySwitch.Parent = dialog
-flySwitch.Position = UDim2.new(0,170,0,230)
-flySwitch.Size = UDim2.new(0,140,0,32)
+flySwitch.Position = UDim2.new(0,160,0,196)
+flySwitch.Size = UDim2.new(0,130,0,28)
 flySwitch.Text = "Fly: OFF"
 flySwitch.BackgroundColor3 = Color3.fromRGB(30,30,30)
 flySwitch.TextColor3 = Color3.fromRGB(180,180,255)
@@ -254,12 +296,13 @@ flySwitch.MouseButton1Click:Connect(function()
     flySwitch.TextColor3 = fly and Color3.fromRGB(50,200,255) or Color3.fromRGB(180,180,255)
 end)
 
--- Extra Feature: Rainbow Character
+-- Rainbow Character, restore color after off
 local rainbowChar = false
+local originalColors = {}
 local rainbowSwitch = Instance.new("TextButton")
 rainbowSwitch.Parent = dialog
-rainbowSwitch.Position = UDim2.new(0,20,0,275)
-rainbowSwitch.Size = UDim2.new(0,140,0,32)
+rainbowSwitch.Position = UDim2.new(0,15,0,235)
+rainbowSwitch.Size = UDim2.new(0,130,0,28)
 rainbowSwitch.Text = "Rainbow: OFF"
 rainbowSwitch.BackgroundColor3 = Color3.fromRGB(30,30,30)
 rainbowSwitch.TextColor3 = Color3.fromRGB(255,200,90)
@@ -270,11 +313,38 @@ rainbowSwitch.MouseButton1Click:Connect(function()
     rainbowChar = not rainbowChar
     rainbowSwitch.Text = "Rainbow: " .. (rainbowChar and "ON" or "OFF")
     rainbowSwitch.TextColor3 = rainbowChar and Color3.fromRGB(255,255,0) or Color3.fromRGB(255,200,90)
+    if not rainbowChar and lp.Character then
+        -- Restore original colors
+        for _,part in pairs(lp.Character:GetDescendants()) do
+            if part:IsA("BasePart") and originalColors[part] then
+                part.Color = originalColors[part]
+            end
+        end
+    end
 end)
 
--- Always Teleport Loop
+-- Always Teleport Loop & Sit on Shoulder Handler
 local alwaysTeleportConn = nil
+local sitWeld = nil
+local sitAnim = nil
+
+local function stopSit()
+    if sitWeld then
+        pcall(function() sitWeld:Destroy() end)
+        sitWeld = nil
+    end
+    if sitAnim then
+        pcall(function() sitAnim:Stop() sitAnim:Destroy() end)
+        sitAnim = nil
+    end
+    if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        lp.Character:FindFirstChildOfClass("Humanoid").Sit = false
+    end
+end
+
 local function teleportToPlayer(targetName, modeType)
+    stopSit()
+    if alwaysTeleportConn then alwaysTeleportConn:Disconnect() alwaysTeleportConn = nil end
     local target = Players:FindFirstChild(targetName)
     if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then
         statusText.Text = "Player not found or not loaded!"
@@ -286,46 +356,60 @@ local function teleportToPlayer(targetName, modeType)
         hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,2,0)
         statusText.Text = "Teleported to " .. targetName
     elseif modeType == "Sit On Shoulder" then
-        hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(2,4,0)
-        wait(0.1)
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = hrp
-        weld.Part1 = target.Character.HumanoidRootPart
-        weld.Parent = hrp
-        statusText.Text = "Sitting on " .. targetName .. "'s shoulder (unweld to jump off)"
+        local offset = CFrame.new(1.5, 2.5, 0)
+        hrp.CFrame = target.Character.HumanoidRootPart.CFrame * offset
+        -- Sit animation
+        local hum = lp.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.Sit = true end
+        -- Try play sit anim
+        if hum then
+            local sitAnimObj = Instance.new("Animation")
+            sitAnimObj.AnimationId = "rbxassetid://2506281703" -- common sit animation
+            sitAnim = hum:LoadAnimation(sitAnimObj)
+            sitAnim:Play()
+        end
+        -- Weld to their HRP
+        sitWeld = Instance.new("WeldConstraint")
+        sitWeld.Part0 = hrp
+        sitWeld.Part1 = target.Character.HumanoidRootPart
+        sitWeld.Parent = hrp
+        statusText.Text = "Sitting on " .. targetName .. "'s shoulder"
     elseif modeType == "Always Teleport" then
-        if alwaysTeleportConn then alwaysTeleportConn:Disconnect() end
         alwaysTeleportConn = RunService.RenderStepped:Connect(function()
             if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                lp.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,2,0)
+                local tgtCFrame = target.Character.HumanoidRootPart.CFrame
+                local look = tgtCFrame.LookVector
+                -- Always teleport behind target (2.5 studs behind)
+                lp.Character.HumanoidRootPart.CFrame = tgtCFrame * CFrame.new(0,1.5,-2.5)
             end
         end)
-        statusText.Text = "Always teleporting to " .. targetName .. " (close dialog to stop)"
+        statusText.Text = "Always teleporting behind " .. targetName .. " (close dialog to stop)"
     end
 end
 
 teleBtn.MouseButton1Click:Connect(function()
-    local uname = userInput.Text
+    local uname = selected.Text
     if uname == "" then
-        statusText.Text = "Input a username."
+        statusText.Text = "Pilih player target dahulu."
         return
     end
-    if alwaysTeleportConn then alwaysTeleportConn:Disconnect() alwaysTeleportConn = nil end
     teleportToPlayer(uname, modeList[mode])
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     dialog.Visible = false
     statusText.Text = ""
+    stopSit()
     if alwaysTeleportConn then alwaysTeleportConn:Disconnect() alwaysTeleportConn = nil end
 end)
 
 -- Menu Button Toggle
 menuBtn.MouseButton1Click:Connect(function()
     dialog.Visible = not dialog.Visible
-    if not dialog.Visible and alwaysTeleportConn then
-        alwaysTeleportConn:Disconnect()
-        alwaysTeleportConn = nil
+    if not dialog.Visible then
+        statusText.Text = ""
+        stopSit()
+        if alwaysTeleportConn then alwaysTeleportConn:Disconnect() alwaysTeleportConn = nil end
     end
 end)
 
@@ -352,7 +436,7 @@ RunService.RenderStepped:Connect(function()
         end
         -- WASD on PC, thumbstick on mobile
         local moveVec = Vector3.new()
-        if isMobile then
+        if UserInputService.TouchEnabled then
             moveVec = lp:GetMouse().Hit.LookVector * 35
         else
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Camera.CFrame.LookVector end
@@ -372,32 +456,37 @@ end)
 coroutine.wrap(function()
     while true do
         if rainbowChar and lp.Character then
-            local t = tick()
-            local c = getRGBColor(t)
             for _,part in pairs(lp.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                    part.Color = c
+                if part:IsA("BasePart") then
+                    if not originalColors[part] then
+                        originalColors[part] = part.Color
+                    end
+                    part.Color = getRGBColor(tick())
                 end
             end
         end
-        wait(0.1)
+        wait(0.12)
     end
 end)()
 
--- RGB Outline
+-- Dialog RGB Outline
 coroutine.wrap(function()
     while true do
-        local t = tick()
-        accent.Color = getRGBColor(t)
-        dialogStroke.Color = getRGBColor(t + 1)
+        dialogStroke.Color = getRGBColor(tick())
         wait(0.03)
     end
 end)()
 
 -- Hide on Console
-if UserInputService.GamepadEnabled and not isMobile then
+if UserInputService.GamepadEnabled and not UserInputService.TouchEnabled then
     gui.Enabled = false
     warn("ModMenu supports only Mobile & PC, not Console.")
 end
+
+-- Restore color on respawn
+lp.CharacterAdded:Connect(function(char)
+    wait(1)
+    originalColors = {}
+end)
 
 -- // END //
