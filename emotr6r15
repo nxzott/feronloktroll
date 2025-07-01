@@ -1,22 +1,49 @@
--- Universal Emote Modmenu Roblox (R15 & R6, Drag menu & open button, fix scroll, stop emote button)
+-- Universal Emote Modmenu Roblox (Drag ala Infinite Yield, Daftar emote akurat, Scroll, Stop button)
+
+local player = game.Players.LocalPlayer
 
 local emotes = {
     {name="wave",      r15="rbxassetid://507770239",   r6="rbxassetid://128777973"},
-    {name="point",     r15="rbxassetid://507770453",   r6="rbxassetid://128853357"},
     {name="cheer",     r15="rbxassetid://507770677",   r6="rbxassetid://129423131"},
     {name="laugh",     r15="rbxassetid://507770818",   r6="rbxassetid://129423030"},
     {name="dance",     r15="rbxassetid://507771019",   r6="rbxassetid://182435998"},
     {name="dance2",    r15="rbxassetid://507776043",   r6="rbxassetid://182436842"},
     {name="dance3",    r15="rbxassetid://507777268",   r6="rbxassetid://182436935"},
+    {name="point",     r15="rbxassetid://507770453",   r6="rbxassetid://128853357"},
+    {name="clap",      r15="rbxassetid://4849487176",  r6="rbxassetid://4849487176"},
+    {name="salute",    r15="rbxassetid://508892637",   r6="rbxassetid://128777973"},
     {name="shrug",     r15="rbxassetid://507785023",   r6="rbxassetid://138017960"},
-    {name="salute",    r15="rbxassetid://507770239",   r6="rbxassetid://128777973"},
-    {name="tilt",      r15="rbxassetid://3152375246",  r6="rbxassetid://3152378852"},
-    {name="hello",     r15="rbxassetid://4849482296",  r6="rbxassetid://4849482296"},
-    -- Tambah emote lain di sini jika mau
 }
 
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
+-- Dragify ala Infinite Yield
+local function dragify(Frame)
+    local UIS = game:GetService("UserInputService")
+    local dragToggle, dragInput, dragStart, startPos
+
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = Frame.Position
+        end
+    end)
+    Frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragToggle = false
+        end
+    end)
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            local delta = input.Position - dragStart
+            Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
 
 -- GUI
 local gui = Instance.new("ScreenGui")
@@ -24,11 +51,11 @@ gui.Name = "EmoteModmenu"
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Open button (bisa di-drag)
+-- Open button (dragable)
 local openBtn = Instance.new("TextButton")
 openBtn.Name = "OpenEmoteMenu"
 openBtn.Size = UDim2.new(0, 170, 0, 44)
-openBtn.Position = UDim2.new(0.5, -85, 0.12, 0)
+openBtn.Position = UDim2.new(0.5, -85, 0.1, 0)
 openBtn.Text = "☰ Emote Modmenu"
 openBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 openBtn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -38,13 +65,14 @@ openBtn.AutoButtonColor = true
 openBtn.Parent = gui
 local openCorner = Instance.new("UICorner", openBtn)
 openCorner.CornerRadius = UDim.new(1,0)
+dragify(openBtn)
 
--- Modmenu main frame (juga bisa di-drag)
-local menuHeight = math.clamp(#emotes * 44 + 120, 280, 410)
+-- Modmenu main frame (dragable)
+local menuHeight = math.clamp(#emotes * 44 + 120, 260, 430)
 local frame = Instance.new("Frame")
 frame.Name = "MainMenu"
 frame.Size = UDim2.new(0, 340, 0, menuHeight)
-frame.Position = UDim2.new(0.5, -170, 0.3, 0)
+frame.Position = UDim2.new(0.5, -170, 0.24, 0)
 frame.BackgroundColor3 = Color3.fromRGB(38, 50, 56)
 frame.Visible = false
 frame.Parent = gui
@@ -54,8 +82,9 @@ local stroke = Instance.new("UIStroke", frame)
 stroke.Thickness = 3
 stroke.Color = Color3.fromRGB(0, 170, 255)
 stroke.Transparency = 0.25
+dragify(frame)
 
--- Judul (drag menu lewat ini)
+-- Judul
 local title = Instance.new("TextLabel", frame)
 title.Name = "TitleBar"
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -82,13 +111,12 @@ closeBtn.ZIndex = 5
 
 closeBtn.MouseButton1Click:Connect(function()
     frame.Visible = false
-    openBtn.Visible = true
 end)
 openBtn.MouseButton1Click:Connect(function()
     frame.Visible = true
 end)
 
--- Scroll list (sekarang fix, bisa scroll penuh)
+-- Scroll list (fix)
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1, -32, 1, -120)
 scroll.Position = UDim2.new(0, 16, 0, 48)
@@ -104,16 +132,15 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 -- Fungsi emote universal
 local function playEmote(emoteData)
-    local char = player.Character
+    local char = player.Character or player.CharacterAdded:Wait()
     if not char or not char:FindFirstChildWhichIsA("Humanoid") then return end
     local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-    -- Detect rig type
     local rigType = humanoid.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
     -- Stop all previous emotes
     for _, tr in ipairs(humanoid:GetPlayingAnimationTracks()) do
         tr:Stop()
     end
-    -- Prioritaskan chat command jika didukung
+    -- Chat command (jika didukung)
     pcall(function()
         game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer("/e " .. emoteData.name, "All")
     end)
@@ -142,6 +169,12 @@ for i, emoteData in ipairs(emotes) do
     end)
 end
 
+-- Fix scroll jika jumlah emote berubah
+scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
+end)
+
 -- Tombol stop emote
 local stopBtn = Instance.new("TextButton", frame)
 stopBtn.Size = UDim2.new(1, -32, 0, 40)
@@ -163,46 +196,4 @@ stopBtn.MouseButton1Click:Connect(function()
             tr:Stop()
         end
     end
-end)
-
--- DRAG SYSTEM (untuk frame dan openBtn)
-local UserInputService = game:GetService("UserInputService")
-
-local function makeDraggable(instance)
-    local dragging = false
-    local dragInput, dragStart, startPos
-
-    instance.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = instance.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    instance.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            instance.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
-makeDraggable(title)      -- Drag menu lewat title bar
-makeDraggable(frame)      -- Juga bisa drag menu lewat frame
-makeDraggable(openBtn)    -- Drag tombol pembuka!
-
--- Agar scroll bisa penuh
-scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
-layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 6)
 end)
