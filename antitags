@@ -1,0 +1,105 @@
+--[[
+  Roblox Anti-Tags Chat Script
+  --------------------------------
+  Fungsi:
+  - Mencegah pesan chat terkena filter/tag (#) oleh sistem Roblox
+  - Dengan menyisipkan karakter tak terlihat (invisible character) pada kata sensitif
+  - Tidak menjamin 100% lolos filter, tapi meningkatkan peluang pesan tidak ter-tag
+
+  Cara Pakai:
+  - Pasang script ini pada LocalScript (misal di StarterPlayerScripts)
+  - Daftar kata sensitif dapat diedit sesuai kebutuhan
+--]]
+
+-- Daftar kata sensitif yang ingin dihindari dari filter
+local SENSITIVE_WORDS = {
+    "discord",
+    "roblox",
+    "admin",
+    "bypass",
+    "sex",
+    "hack",
+    "exploit",
+    -- Tambahkan kata lain sesuai kebutuhan
+}
+
+-- Karakter kosong/invisible (Zero Width Space)
+local INVISIBLE_CHAR = utf8.char(0x200B)
+
+-- Fungsi menyisipkan karakter kosong di dalam kata sensitif
+local function insertInvisible(str)
+    -- Sisipkan INVISIBLE_CHAR di tengah-tengah kata, misal: "discord" -> "discord"
+    local len = utf8.len(str)
+    if len and len > 2 then
+        local half = math.floor(len / 2)
+        local left = utf8.sub(str, 1, half)
+        local right = utf8.sub(str, half + 1)
+        return left .. INVISIBLE_CHAR .. right
+    end
+    return str
+end
+
+-- Fungsi untuk memproses pesan sebelum dikirim
+local function filterMessage(msg)
+    for _, word in ipairs(SENSITIVE_WORDS) do
+        -- Cari kata sensitif di pesan (case-insensitive)
+        local pattern = word:gsub("%W", "%%%0") -- escape non-alphanumeric
+        pattern = "%f[%a]" .. pattern .. "%f[%A]" -- word boundary
+        msg = msg:gsub("(?i)"..pattern, function(w)
+            return insertInvisible(w)
+        end)
+    end
+    return msg
+end
+
+-- Hook ke chat default Roblox (BubbleChat + ClassicChat)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Fungsi intercept chat input (Classic Chat)
+local function hookClassicChat()
+    local StarterGui = game:GetService("StarterGui")
+    StarterGui:SetCore("ChatMakeSystemMessage", {
+        Text = "[AntiTags] Script aktif. Pesan sensitif akan diubah otomatis.";
+        Color = Color3.new(0.5, 1, 0.5);
+    })
+    local ChatBar = LocalPlayer.PlayerGui:FindFirstChild("Chat") and LocalPlayer.PlayerGui.Chat:FindFirstChild("Frame") and LocalPlayer.PlayerGui.Chat.Frame:FindFirstChild("ChatBarParentFrame") and LocalPlayer.PlayerGui.Chat.Frame.ChatBarParentFrame:FindFirstChild("Frame") and LocalPlayer.PlayerGui.Chat.Frame.ChatBarParentFrame.Frame:FindFirstChild("BoxFrame") and LocalPlayer.PlayerGui.Chat.Frame.ChatBarParentFrame.Frame.BoxFrame:FindFirstChild("Frame") and LocalPlayer.PlayerGui.Chat.Frame.ChatBarParentFrame.Frame.BoxFrame.Frame:FindFirstChild("ChatBar")
+    if ChatBar and ChatBar:IsA("TextBox") then
+        ChatBar.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+                local filtered = filterMessage(ChatBar.Text)
+                if filtered ~= ChatBar.Text then
+                    ChatBar.Text = filtered
+                end
+            end
+        end)
+    end
+end
+
+-- Fungsi intercept chat input (BubbleChat/Custom Chat)
+local function hookBubbleChat()
+    -- Untuk chat custom atau BubbleChat v2, kamu perlu hook sendiri TextBox chatnya
+    -- Misal, jika ada GUI chat custom bernama "CustomChatGui"
+    -- local chatBox = LocalPlayer.PlayerGui:WaitForChild("CustomChatGui"):WaitForChild("ChatInput")
+    -- chatBox.FocusLost:Connect(function(enterPressed)
+    --     if enterPressed then
+    --         local filtered = filterMessage(chatBox.Text)
+    --         if filtered ~= chatBox.Text then
+    --             chatBox.Text = filtered
+    --         end
+    --     end
+    -- end)
+end
+
+-- Eksekusi hook
+hookClassicChat()
+hookBubbleChat()
+
+print("[AntiTags] Script loaded!")
+
+--[[ 
+  Note:
+  - Script ini bekerja hanya di client (user sendiri). Untuk bypass filter di semua pemain, butuh akses server script (TIDAK DIBOLEHKAN OLEH ROBLOX).
+  - Tidak semua kata bisa dibypass, dan ada kemungkinan Roblox memperbarui filter-nya.
+  - Gunakan script ini dengan bijak, jangan untuk melanggar ToS Roblox.
+--]]
