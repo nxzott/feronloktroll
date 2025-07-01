@@ -1,0 +1,355 @@
+--[[
+	Mod Menu Script by Copilot
+	- Tema Hitam, Aksen RGB
+	- Drag & Drop GUI
+	- Tombol Bulat
+	- Fitur Teleport ke Pemain (Nama/Username) + Switch Mode
+	- Fitur tambahan: Walkspeed hack, JumpPower hack (contoh, tidak merusak)
+]]
+
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local uis = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
+
+local function createRGB()
+	local t = 0
+	return function(speed)
+		t = t + (speed or 0.01)
+		return Color3.fromHSV((t % 1),1,1)
+	end
+end
+local nextRGB = createRGB()
+
+-- Main ModMenu Container
+local modMenu = Instance.new("ScreenGui", game.CoreGui)
+modMenu.Name = "CopilotModMenu"
+
+-- Drag logic
+local function makeDraggable(frame)
+	local dragging, dragInput, dragStart, startPos
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+
+	uis.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
+
+-- ==== Floating MOD MENU BUTTON ====
+local menuBtn = Instance.new("Frame", modMenu)
+menuBtn.Size = UDim2.new(0, 60, 0, 60)
+menuBtn.Position = UDim2.new(0, 100, 0, 200)
+menuBtn.BackgroundColor3 = Color3.new(0,0,0)
+menuBtn.BackgroundTransparency = 0.2
+menuBtn.BorderSizePixel = 0
+menuBtn.Active = true
+menuBtn.Draggable = false
+menuBtn.Name = "MenuButton"
+menuBtn.ClipsDescendants = true
+
+local uiCorner = Instance.new("UICorner", menuBtn)
+uiCorner.CornerRadius = UDim.new(1, 0)
+
+local btnText = Instance.new("TextLabel", menuBtn)
+btnText.Size = UDim2.new(1, 0, 1, 0)
+btnText.BackgroundTransparency = 1
+btnText.Text = "≡"
+btnText.Font = Enum.Font.GothamBold
+btnText.TextScaled = true
+btnText.TextColor3 = Color3.fromRGB(255,255,255)
+
+makeDraggable(menuBtn)
+
+-- ==== MOD MENU DIALOG ====
+local dialog = Instance.new("Frame", modMenu)
+dialog.Size = UDim2.new(0, 320, 0, 400)
+dialog.Position = UDim2.new(0, 180, 0, 120)
+dialog.BackgroundColor3 = Color3.new(0.09,0.09,0.09)
+dialog.BackgroundTransparency = 0.1
+dialog.BorderSizePixel = 0
+dialog.Visible = false
+dialog.Name = "ModDialog"
+
+local dialogCorner = Instance.new("UICorner", dialog)
+dialogCorner.CornerRadius = UDim.new(0.12, 0)
+
+makeDraggable(dialog)
+
+-- Close Button
+local closeBtn = Instance.new("TextButton", dialog)
+closeBtn.Size = UDim2.new(0, 36, 0, 36)
+closeBtn.Position = UDim2.new(1, -42, 0, 6)
+closeBtn.BackgroundColor3 = Color3.new(0,0,0)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextScaled = true
+closeBtn.BorderSizePixel = 0
+
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeCorner.CornerRadius = UDim.new(1,0)
+
+-- ==== RGB Accent Bar ====
+local bar = Instance.new("Frame", dialog)
+bar.Size = UDim2.new(1,0,0,5)
+bar.Position = UDim2.new(0,0,0,0)
+bar.BackgroundColor3 = Color3.fromRGB(255,0,0)
+bar.BorderSizePixel = 0
+
+-- ==== Teleport Section ====
+local tpLabel = Instance.new("TextLabel", dialog)
+tpLabel.Size = UDim2.new(1, -20, 0, 32)
+tpLabel.Position = UDim2.new(0, 10, 0, 24)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Text = "Teleport ke Pemain"
+tpLabel.TextColor3 = Color3.new(1,1,1)
+tpLabel.Font = Enum.Font.GothamBold
+tpLabel.TextSize = 19
+tpLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local tpBox = Instance.new("TextBox", dialog)
+tpBox.Size = UDim2.new(1, -120, 0, 32)
+tpBox.Position = UDim2.new(0, 10, 0, 64)
+tpBox.PlaceholderText = "Nama/Username"
+tpBox.Text = ""
+tpBox.BackgroundColor3 = Color3.new(0.13,0.13,0.13)
+tpBox.TextColor3 = Color3.new(1,1,1)
+tpBox.Font = Enum.Font.Gotham
+tpBox.TextSize = 16
+local tpCorner = Instance.new("UICorner", tpBox)
+tpCorner.CornerRadius = UDim.new(0.5,0)
+
+-- Mode Switch
+local mode = "Normal"
+local modeBtn = Instance.new("TextButton", dialog)
+modeBtn.Size = UDim2.new(0, 90, 0, 32)
+modeBtn.Position = UDim2.new(1, -100, 0, 64)
+modeBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+modeBtn.Text = "Mode: Normal"
+modeBtn.TextColor3 = Color3.new(1,1,1)
+modeBtn.Font = Enum.Font.Gotham
+modeBtn.TextSize = 15
+local modeCorner = Instance.new("UICorner", modeBtn)
+modeCorner.CornerRadius = UDim.new(0.5,0)
+modeBtn.MouseButton1Click:Connect(function()
+	if mode == "Normal" then
+		mode = "Duduk"
+		modeBtn.Text = "Mode: Duduk"
+	elseif mode == "Duduk" then
+		mode = "Auto"
+		modeBtn.Text = "Mode: Auto"
+	else
+		mode = "Normal"
+		modeBtn.Text = "Mode: Normal"
+	end
+end)
+
+-- Teleport Button
+local tpGo = Instance.new("TextButton", dialog)
+tpGo.Size = UDim2.new(1, -20, 0, 36)
+tpGo.Position = UDim2.new(0, 10, 0, 108)
+tpGo.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+tpGo.Text = "Teleport"
+tpGo.TextColor3 = Color3.fromRGB(255,255,255)
+tpGo.Font = Enum.Font.GothamBold
+tpGo.TextSize = 19
+local tpGoCorner = Instance.new("UICorner", tpGo)
+tpGoCorner.CornerRadius = UDim.new(0.5, 0)
+
+-- ==== WalkSpeed & JumpPower Hack Section ====
+local wsLabel = Instance.new("TextLabel", dialog)
+wsLabel.Size = UDim2.new(1, -20, 0, 30)
+wsLabel.Position = UDim2.new(0, 10, 0, 158)
+wsLabel.BackgroundTransparency = 1
+wsLabel.Text = "WalkSpeed: "
+wsLabel.TextColor3 = Color3.new(1,1,1)
+wsLabel.Font = Enum.Font.GothamBold
+wsLabel.TextSize = 15
+wsLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local wsBox = Instance.new("TextBox", dialog)
+wsBox.Size = UDim2.new(0, 70, 0, 28)
+wsBox.Position = UDim2.new(0, 110, 0, 162)
+wsBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+wsBox.TextColor3 = Color3.new(1,1,1)
+wsBox.Text = tostring(player.Character and player.Character.Humanoid.WalkSpeed or 16)
+wsBox.Font = Enum.Font.Gotham
+wsBox.TextSize = 14
+local wsCorner = Instance.new("UICorner", wsBox)
+wsCorner.CornerRadius = UDim.new(0.5,0)
+
+local wsApply = Instance.new("TextButton", dialog)
+wsApply.Size = UDim2.new(0, 60, 0, 28)
+wsApply.Position = UDim2.new(0, 190, 0, 162)
+wsApply.BackgroundColor3 = Color3.fromRGB(50,50,50)
+wsApply.Text = "Set"
+wsApply.TextColor3 = Color3.fromRGB(255,255,255)
+wsApply.Font = Enum.Font.Gotham
+wsApply.TextSize = 14
+local wsApplyCorner = Instance.new("UICorner", wsApply)
+wsApplyCorner.CornerRadius = UDim.new(0.5, 0)
+
+-- JumpPower
+local jpLabel = Instance.new("TextLabel", dialog)
+jpLabel.Size = UDim2.new(1, -20, 0, 30)
+jpLabel.Position = UDim2.new(0, 10, 0, 198)
+jpLabel.BackgroundTransparency = 1
+jpLabel.Text = "JumpPower: "
+jpLabel.TextColor3 = Color3.new(1,1,1)
+jpLabel.Font = Enum.Font.GothamBold
+jpLabel.TextSize = 15
+jpLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local jpBox = Instance.new("TextBox", dialog)
+jpBox.Size = UDim2.new(0, 70, 0, 28)
+jpBox.Position = UDim2.new(0, 110, 0, 202)
+jpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+jpBox.TextColor3 = Color3.new(1,1,1)
+jpBox.Text = tostring(player.Character and player.Character.Humanoid.JumpPower or 50)
+jpBox.Font = Enum.Font.Gotham
+jpBox.TextSize = 14
+local jpCorner = Instance.new("UICorner", jpBox)
+jpCorner.CornerRadius = UDim.new(0.5,0)
+
+local jpApply = Instance.new("TextButton", dialog)
+jpApply.Size = UDim2.new(0, 60, 0, 28)
+jpApply.Position = UDim2.new(0, 190, 0, 202)
+jpApply.BackgroundColor3 = Color3.fromRGB(50,50,50)
+jpApply.Text = "Set"
+jpApply.TextColor3 = Color3.fromRGB(255,255,255)
+jpApply.Font = Enum.Font.Gotham
+jpApply.TextSize = 14
+local jpApplyCorner = Instance.new("UICorner", jpApply)
+jpApplyCorner.CornerRadius = UDim.new(0.5, 0)
+
+-- ==== Show/Hide Dialog ====
+local menuOpen = false
+btnText.MouseButton1Click:Connect(function()
+	menuOpen = not menuOpen
+	dialog.Visible = menuOpen
+end)
+menuBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 and input.Position.X < menuBtn.AbsolutePosition.X + menuBtn.AbsoluteSize.X and input.Position.Y < menuBtn.AbsolutePosition.Y + menuBtn.AbsoluteSize.Y then
+		menuOpen = not menuOpen
+		dialog.Visible = menuOpen
+	end
+end)
+closeBtn.MouseButton1Click:Connect(function()
+	menuOpen = false
+	dialog.Visible = false
+end)
+
+-- ==== Teleport Logic ====
+local autoTpConn
+tpGo.MouseButton1Click:Connect(function()
+	local name = tpBox.Text
+	if name == "" then return end
+	local target
+	for _,plr in ipairs(game.Players:GetPlayers()) do
+		if plr.Name:lower():sub(1,#name) == name:lower() or plr.DisplayName:lower():find(name:lower()) then
+			target = plr
+			break
+		end
+	end
+	if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+		local function tpFunc()
+			if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,2,0)
+			end
+		end
+		if mode == "Normal" then
+			tpFunc()
+		elseif mode == "Duduk" then
+			tpFunc()
+			wait(0.1)
+			if player.Character and player.Character:FindFirstChild("Humanoid") then
+				player.Character.Humanoid.Sit = true
+			end
+		elseif mode == "Auto" then
+			if autoTpConn then autoTpConn:Disconnect() end
+			autoTpConn = rs.RenderStepped:Connect(function()
+				if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+					tpFunc()
+				end
+			end)
+		end
+	end
+end)
+
+-- Stop auto-teleport if menu closed
+closeBtn.MouseButton1Click:Connect(function()
+	if autoTpConn then autoTpConn:Disconnect() autoTpConn = nil end
+end)
+
+-- ==== Walkspeed Hack ====
+wsApply.MouseButton1Click:Connect(function()
+	local num = tonumber(wsBox.Text)
+	if num and player.Character and player.Character:FindFirstChild("Humanoid") then
+		player.Character.Humanoid.WalkSpeed = num
+	end
+end)
+
+-- ==== JumpPower Hack ====
+jpApply.MouseButton1Click:Connect(function()
+	local num = tonumber(jpBox.Text)
+	if num and player.Character and player.Character:FindFirstChild("Humanoid") then
+		player.Character.Humanoid.JumpPower = num
+	end
+end)
+
+-- ==== RGB ACCENT Animation ====
+spawn(function()
+	while wait(0.02) do
+		local c = nextRGB(0.008)
+		bar.BackgroundColor3 = c
+		btnText.TextColor3 = c
+	end
+end)
+
+-- ==== Extra: Dialog fade in/out ====
+dialog.Visible = false
+local function fadeIn(frame)
+	frame.Visible = true
+	for i=0,1,0.1 do
+		frame.BackgroundTransparency = 0.15 + (1-i)*0.1
+		wait(0.01)
+	end
+	frame.BackgroundTransparency = 0.1
+end
+local function fadeOut(frame)
+	for i=1,0,-0.1 do
+		frame.BackgroundTransparency = 0.15 + (1-i)*0.1
+		wait(0.01)
+	end
+	frame.Visible = false
+end
+
+-- Show dialog with fade
+btnText.MouseButton1Click:Connect(function()
+	if menuOpen then fadeIn(dialog) else fadeOut(dialog) end
+end)
+closeBtn.MouseButton1Click:Connect(function() fadeOut(dialog) end)
+
+-- Selesai! Tambahkan fitur lain sesuai kreativitas kamu!
