@@ -1,0 +1,600 @@
+--[[
+Universal FE Troll Menu (Nxzott Theme)
+Fitur: Pilih target, troll dengan Fling, Bring, Spam Jump, Spam Sit, Freeze, Loop TP, Headless, Spam Chat, dsb.
+FE supported (client-side troll visual, sangat ngeselin & fun)
+By Copilot for @nxzott
+]]
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local TS = game:GetService("TweenService")
+local Cam = workspace.CurrentCamera
+
+-- THEME
+local ACCENT = Color3.fromRGB(162, 89, 236)
+local ACCENT2 = Color3.fromRGB(135, 82, 198)
+local DARK = Color3.fromRGB(21, 20, 26)
+local DARK2 = Color3.fromRGB(36, 34, 44)
+local WHITE = Color3.fromRGB(230,230,240)
+local BTN_ON  = ACCENT
+local BTN_OFF = Color3.fromRGB(96, 60, 128)
+
+if game.CoreGui:FindFirstChild("NXZ_FE_TrollUniversal") then game.CoreGui.NXZ_FE_TrollUniversal:Destroy() end
+
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "NXZ_FE_TrollUniversal"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+-- Menu Button
+local MENU_SIZE = 44
+local menuBtn = Instance.new("ImageButton")
+menuBtn.Size = UDim2.new(0, MENU_SIZE, 0, MENU_SIZE)
+menuBtn.Position = UDim2.new(0.5, -MENU_SIZE/2, 0, 12)
+menuBtn.BackgroundTransparency = 1
+menuBtn.Image = "rbxassetid://3570695787"
+menuBtn.ImageColor3 = DARK2
+menuBtn.Parent = gui
+local menuStroke = Instance.new("UIStroke", menuBtn)
+menuStroke.Color = ACCENT
+menuStroke.Thickness = 2
+menuStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+menuBtn.AutoButtonColor = false
+local icon = Instance.new("ImageLabel", menuBtn)
+icon.BackgroundTransparency = 1
+icon.Size = UDim2.new(0.6,0,0.6,0)
+icon.Position = UDim2.new(0.2,0,0.2,0)
+icon.Image = "rbxassetid://6035047409"
+icon.ImageColor3 = ACCENT
+
+-- Anim press
+menuBtn.MouseButton1Down:Connect(function()
+    TS:Create(menuBtn, TweenInfo.new(0.14, Enum.EasingStyle.Back), {Size=UDim2.new(0,MENU_SIZE+8,0,MENU_SIZE+8)}):Play()
+    TS:Create(menuBtn, TweenInfo.new(0.14, Enum.EasingStyle.Back), {ImageColor3=ACCENT}):Play()
+end)
+menuBtn.MouseButton1Up:Connect(function()
+    TS:Create(menuBtn, TweenInfo.new(0.12, Enum.EasingStyle.Back), {Size=UDim2.new(0,MENU_SIZE,0,MENU_SIZE)}):Play()
+    TS:Create(menuBtn, TweenInfo.new(0.12, Enum.EasingStyle.Back), {ImageColor3=DARK2}):Play()
+end)
+
+-- Helper: draggable
+local function makeDraggable(frame)
+    local dragToggle, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if not dragToggle then return end
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+makeDraggable(menuBtn)
+
+-- Dialog
+local DIALOG_W, DIALOG_H = 360, 490
+local dialog = Instance.new("Frame", gui)
+dialog.Position = UDim2.new(0.5, -DIALOG_W/2, 0.13, 0)
+dialog.Size = UDim2.new(0, DIALOG_W, 0, DIALOG_H)
+dialog.BackgroundColor3 = DARK2
+dialog.BackgroundTransparency = 1
+dialog.Visible = false
+dialog.Active = true
+dialog.ClipsDescendants = true
+local corner = Instance.new("UICorner", dialog)
+corner.CornerRadius = UDim.new(0,16)
+local dialogStroke = Instance.new("UIStroke", dialog)
+dialogStroke.Thickness = 2
+dialogStroke.Color = ACCENT
+dialogStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+makeDraggable(dialog)
+local function showDialog()
+    dialog.Visible = true
+    dialog.BackgroundTransparency = 1
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then v.TextTransparency = 1 end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then v.BackgroundTransparency = 1 end
+    end
+    TS:Create(dialog, TweenInfo.new(0.19), {BackgroundTransparency=0.07}):Play()
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then
+            TS:Create(v, TweenInfo.new(0.21), {TextTransparency=0}):Play()
+        end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+            TS:Create(v, TweenInfo.new(0.21), {BackgroundTransparency=0}):Play()
+        end
+    end
+end
+local function hideDialog()
+    TS:Create(dialog, TweenInfo.new(0.15), {BackgroundTransparency=1}):Play()
+    for _,v in pairs(dialog:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") then
+            TS:Create(v, TweenInfo.new(0.15), {TextTransparency=1}):Play()
+        end
+        if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+            TS:Create(v, TweenInfo.new(0.15), {BackgroundTransparency=1}):Play()
+        end
+    end
+    wait(0.16)
+    dialog.Visible = false
+end
+
+-- Close btn
+local closeBtn = Instance.new("TextButton", dialog)
+closeBtn.Size = UDim2.new(0,28,0,28)
+closeBtn.Position = UDim2.new(1, -38, 0, 10)
+closeBtn.BackgroundColor3 = DARK
+closeBtn.Text = "⨉"
+closeBtn.TextColor3 = WHITE
+closeBtn.TextScaled = true
+closeBtn.Font = Enum.Font.GothamBlack
+closeBtn.BackgroundTransparency = 0
+closeBtn.BorderSizePixel = 0
+local closeCorner = Instance.new("UICorner", closeBtn)
+closeCorner.CornerRadius = UDim.new(1,0)
+
+-- Title
+local title = Instance.new("TextLabel", dialog)
+title.Position = UDim2.new(0, 0, 0, 10)
+title.Size = UDim2.new(1, 0, 0, 34)
+title.Text = "Universal FE Troll - Nxzott"
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = WHITE
+title.BackgroundTransparency = 1
+title.TextScaled = true
+
+-- Player Dropdown
+local playerLabel = Instance.new("TextLabel", dialog)
+playerLabel.Text = "Target:"
+playerLabel.Position = UDim2.new(0,18,0,46)
+playerLabel.Size = UDim2.new(0,80,0,22)
+playerLabel.Font = Enum.Font.Gotham
+playerLabel.TextColor3 = WHITE
+playerLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerLabel.BackgroundTransparency = 1
+playerLabel.TextSize = 16
+
+local dropdown = Instance.new("Frame", dialog)
+dropdown.Position = UDim2.new(0,90,0,46)
+dropdown.Size = UDim2.new(0, 170, 0, 22)
+dropdown.BackgroundColor3 = DARK
+dropdown.BorderSizePixel = 0
+local dropdownCorner = Instance.new("UICorner", dropdown)
+dropdownCorner.CornerRadius = UDim.new(0,8)
+
+local selected = Instance.new("TextButton", dropdown)
+selected.Size = UDim2.new(1,0,1,0)
+selected.BackgroundTransparency = 1
+selected.TextColor3 = WHITE
+selected.Text = ""
+selected.Font = Enum.Font.Gotham
+selected.TextSize = 15
+selected.TextXAlignment = Enum.TextXAlignment.Left
+
+local dropList = Instance.new("ScrollingFrame", dropdown)
+dropList.Size = UDim2.new(1,0,0,0)
+dropList.Position = UDim2.new(0,0,1,0)
+dropList.CanvasSize = UDim2.new(0,0,0,0)
+dropList.Visible = false
+dropList.BackgroundColor3 = DARK
+dropList.BorderSizePixel = 0
+dropList.ScrollBarThickness = 4
+dropList.ZIndex = 10
+local dropListCorner = Instance.new("UICorner", dropList)
+dropListCorner.CornerRadius = UDim.new(0,8)
+
+local function refreshDropdown()
+    dropList:ClearAllChildren()
+    local players = {}
+    for _,v in ipairs(Players:GetPlayers()) do
+        if v ~= lp then table.insert(players, v) end
+    end
+    dropList.CanvasSize = UDim2.new(0,0,0,#players * 22)
+    dropList.Size = UDim2.new(1,0,0,#players > 5 and 110 or #players*22)
+    for i,plr in ipairs(players) do
+        local btn = Instance.new("TextButton")
+        btn.Parent = dropList
+        btn.Size = UDim2.new(1,0,0,22)
+        btn.Position = UDim2.new(0,0,0,(i-1)*22)
+        btn.BackgroundTransparency = 1
+        btn.Text = plr.Name
+        btn.Font = Enum.Font.Gotham
+        btn.TextColor3 = WHITE
+        btn.TextSize = 15
+        btn.ZIndex = 11
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.MouseButton1Click:Connect(function()
+            selected.Text = plr.Name
+            dropList.Visible = false
+        end)
+    end
+end
+refreshDropdown()
+Players.PlayerAdded:Connect(refreshDropdown)
+Players.PlayerRemoving:Connect(refreshDropdown)
+selected.MouseButton1Click:Connect(function()
+    dropList.Visible = not dropList.Visible
+end)
+
+-- Status
+local statusText = Instance.new("TextLabel", dialog)
+statusText.Position = UDim2.new(0,18,0,76)
+statusText.Size = UDim2.new(1,-36,0,20)
+statusText.BackgroundTransparency = 1
+statusText.Text = "Pilih target, lalu aktifkan fitur troll!"
+statusText.TextColor3 = ACCENT
+statusText.Font = Enum.Font.Gotham
+statusText.TextSize = 15
+statusText.TextWrapped = true
+
+-- FLING
+local function Fling(target)
+    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = lp.Character.HumanoidRootPart
+        hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,1,0)
+        wait(0.1)
+        hrp.Velocity = Vector3.new(0,80,0)
+        wait(0.1)
+        hrp.Velocity = Vector3.new(math.random(-200,200),180,math.random(-200,200))
+    end
+end
+local flingBtn = Instance.new("TextButton", dialog)
+flingBtn.Position = UDim2.new(0,18,0,106)
+flingBtn.Size = UDim2.new(1,-36,0,28)
+flingBtn.Text = "Fling Target"
+flingBtn.BackgroundColor3 = DARK
+flingBtn.TextColor3 = BTN_ON
+flingBtn.Font = Enum.Font.GothamBold
+flingBtn.TextSize = 15
+local flingCorner = Instance.new("UICorner", flingBtn)
+flingCorner.CornerRadius = UDim.new(0,8)
+flingBtn.MouseButton1Click:Connect(function()
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt then Fling(tgt) end
+end)
+
+-- SPAM JUMP
+local loopJump = false
+local jumpBtn = Instance.new("TextButton", dialog)
+jumpBtn.Position = UDim2.new(0,18,0,142)
+jumpBtn.Size = UDim2.new(0,164,0,26)
+jumpBtn.Text = "Spam Jump: OFF"
+jumpBtn.BackgroundColor3 = DARK
+jumpBtn.TextColor3 = BTN_OFF
+jumpBtn.Font = Enum.Font.GothamBold
+jumpBtn.TextSize = 14
+local jumpCorner = Instance.new("UICorner", jumpBtn)
+jumpCorner.CornerRadius = UDim.new(0,8)
+jumpBtn.MouseButton1Click:Connect(function()
+    loopJump = not loopJump
+    jumpBtn.Text = "Spam Jump: " .. (loopJump and "ON" or "OFF")
+    jumpBtn.TextColor3 = loopJump and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.35) do
+        if loopJump then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChildOfClass("Humanoid") then
+                tgt.Character.Humanoid.Jump = true
+            end
+        end
+    end
+end)()
+
+-- SPAM SIT
+local loopSit = false
+local sitBtn = Instance.new("TextButton", dialog)
+sitBtn.Position = UDim2.new(0,194,0,142)
+sitBtn.Size = UDim2.new(0,148,0,26)
+sitBtn.Text = "Spam Sit: OFF"
+sitBtn.BackgroundColor3 = DARK
+sitBtn.TextColor3 = BTN_OFF
+sitBtn.Font = Enum.Font.GothamBold
+sitBtn.TextSize = 14
+local sitCorner = Instance.new("UICorner", sitBtn)
+sitCorner.CornerRadius = UDim.new(0,8)
+sitBtn.MouseButton1Click:Connect(function()
+    loopSit = not loopSit
+    sitBtn.Text = "Spam Sit: " .. (loopSit and "ON" or "OFF")
+    sitBtn.TextColor3 = loopSit and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.5) do
+        if loopSit then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChildOfClass("Humanoid") then
+                tgt.Character.Humanoid.Sit = true
+            end
+        end
+    end
+end)()
+
+-- LOOP TELEPORT
+local loopTp = false
+local loopTpBtn = Instance.new("TextButton", dialog)
+loopTpBtn.Position = UDim2.new(0,18,0,178)
+loopTpBtn.Size = UDim2.new(1,-36,0,26)
+loopTpBtn.Text = "Loop Teleport: OFF"
+loopTpBtn.BackgroundColor3 = DARK
+loopTpBtn.TextColor3 = BTN_OFF
+loopTpBtn.Font = Enum.Font.GothamBold
+loopTpBtn.TextSize = 14
+local loopTpCorner = Instance.new("UICorner", loopTpBtn)
+loopTpCorner.CornerRadius = UDim.new(0,8)
+loopTpBtn.MouseButton1Click:Connect(function()
+    loopTp = not loopTp
+    loopTpBtn.Text = "Loop Teleport: " .. (loopTp and "ON" or "OFF")
+    loopTpBtn.TextColor3 = loopTp and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.4) do
+        if loopTp then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                tgt.Character.HumanoidRootPart.CFrame = lp.Character.HumanoidRootPart.CFrame * CFrame.new(0,3,0)
+            end
+        end
+    end
+end)()
+
+-- KILL (FE kill - client visual)
+local killBtn = Instance.new("TextButton", dialog)
+killBtn.Position = UDim2.new(0,18,0,214)
+killBtn.Size = UDim2.new(0,140,0,28)
+killBtn.Text = "Kill Target"
+killBtn.BackgroundColor3 = DARK
+killBtn.TextColor3 = BTN_ON
+killBtn.Font = Enum.Font.GothamBold
+killBtn.TextSize = 15
+local killCorner = Instance.new("UICorner", killBtn)
+killCorner.CornerRadius = UDim.new(0,8)
+killBtn.MouseButton1Click:Connect(function()
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character and tgt.Character:FindFirstChildOfClass("Humanoid") then
+        tgt.Character.Humanoid.Health = 0
+    end
+end)
+
+-- BRING
+local bringBtn = Instance.new("TextButton", dialog)
+bringBtn.Position = UDim2.new(0,194,0,214)
+bringBtn.Size = UDim2.new(0,148,0,28)
+bringBtn.Text = "Bring Target"
+bringBtn.BackgroundColor3 = DARK
+bringBtn.TextColor3 = BTN_ON
+bringBtn.Font = Enum.Font.GothamBold
+bringBtn.TextSize = 15
+local bringCorner = Instance.new("UICorner", bringBtn)
+bringCorner.CornerRadius = UDim.new(0,8)
+bringBtn.MouseButton1Click:Connect(function()
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+        tgt.Character.HumanoidRootPart.CFrame = lp.Character.HumanoidRootPart.CFrame * CFrame.new(0,4,0)
+    end
+end)
+
+-- FREEZE
+local freeze = false
+local freezeBtn = Instance.new("TextButton", dialog)
+freezeBtn.Position = UDim2.new(0,18,0,250)
+freezeBtn.Size = UDim2.new(0,164,0,26)
+freezeBtn.Text = "Freeze: OFF"
+freezeBtn.BackgroundColor3 = DARK
+freezeBtn.TextColor3 = BTN_OFF
+freezeBtn.Font = Enum.Font.GothamBold
+freezeBtn.TextSize = 14
+local freezeCorner = Instance.new("UICorner", freezeBtn)
+freezeCorner.CornerRadius = UDim.new(0,8)
+freezeBtn.MouseButton1Click:Connect(function()
+    freeze = not freeze
+    freezeBtn.Text = "Freeze: " .. (freeze and "ON" or "OFF")
+    freezeBtn.TextColor3 = freeze and BTN_ON or BTN_OFF
+end)
+coroutine.wrap(function()
+    while wait(0.5) do
+        local tgt = Players:FindFirstChild(selected.Text)
+        if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
+            if freeze then
+                tgt.Character.HumanoidRootPart.Anchored = true
+            else
+                tgt.Character.HumanoidRootPart.Anchored = false
+            end
+        end
+    end
+end)()
+
+-- INVISIBLE
+local invisible = false
+local invBtn = Instance.new("TextButton", dialog)
+invBtn.Position = UDim2.new(0,194,0,250)
+invBtn.Size = UDim2.new(0,148,0,26)
+invBtn.Text = "Invisible: OFF"
+invBtn.BackgroundColor3 = DARK
+invBtn.TextColor3 = BTN_OFF
+invBtn.Font = Enum.Font.GothamBold
+invBtn.TextSize = 14
+local invCorner = Instance.new("UICorner", invBtn)
+invCorner.CornerRadius = UDim.new(0,8)
+invBtn.MouseButton1Click:Connect(function()
+    invisible = not invisible
+    invBtn.Text = "Invisible: " .. (invisible and "ON" or "OFF")
+    invBtn.TextColor3 = invisible and BTN_ON or BTN_OFF
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character then
+        for _,v in pairs(tgt.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Transparency = invisible and 1 or 0
+            end
+        end
+    end
+end)
+
+-- HEADLESS
+local headless = false
+local headBtn = Instance.new("TextButton", dialog)
+headBtn.Position = UDim2.new(0,18,0,282)
+headBtn.Size = UDim2.new(0,140,0,28)
+headBtn.Text = "Headless: OFF"
+headBtn.BackgroundColor3 = DARK
+headBtn.TextColor3 = BTN_OFF
+headBtn.Font = Enum.Font.GothamBold
+headBtn.TextSize = 15
+local headCorner = Instance.new("UICorner", headBtn)
+headCorner.CornerRadius = UDim.new(0,8)
+headBtn.MouseButton1Click:Connect(function()
+    headless = not headless
+    headBtn.Text = "Headless: " .. (headless and "ON" or "OFF")
+    headBtn.TextColor3 = headless and BTN_ON or BTN_OFF
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character and tgt.Character:FindFirstChild("Head") then
+        tgt.Character.Head.Transparency = headless and 1 or 0
+        for _,v in pairs(tgt.Character.Head:GetChildren()) do
+            if v:IsA("Decal") then v.Transparency = headless and 1 or 0 end
+        end
+    end
+end)
+
+-- RESET
+local resetBtn = Instance.new("TextButton", dialog)
+resetBtn.Position = UDim2.new(0,194,0,282)
+resetBtn.Size = UDim2.new(0,148,0,28)
+resetBtn.Text = "Reset Target"
+resetBtn.BackgroundColor3 = DARK
+resetBtn.TextColor3 = BTN_ON
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextSize = 15
+local resetCorner = Instance.new("UICorner", resetBtn)
+resetCorner.CornerRadius = UDim.new(0,8)
+resetBtn.MouseButton1Click:Connect(function()
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character and tgt.Character:FindFirstChildOfClass("Humanoid") then
+        tgt.Character.Humanoid.Health = 0
+    end
+end)
+
+-- SPAM CHAT
+local spamchat = false
+local chatBtn = Instance.new("TextButton", dialog)
+chatBtn.Position = UDim2.new(0,18,0,318)
+chatBtn.Size = UDim2.new(1,-36,0,26)
+chatBtn.Text = "Spam Chat: OFF"
+chatBtn.BackgroundColor3 = DARK
+chatBtn.TextColor3 = BTN_OFF
+chatBtn.Font = Enum.Font.GothamBold
+chatBtn.TextSize = 14
+local chatCorner = Instance.new("UICorner", chatBtn)
+chatCorner.CornerRadius = UDim.new(0,8)
+chatBtn.MouseButton1Click:Connect(function()
+    spamchat = not spamchat
+    chatBtn.Text = "Spam Chat: " .. (spamchat and "ON" or "OFF")
+    chatBtn.TextColor3 = spamchat and BTN_ON or BTN_OFF
+end)
+local chatList = {"EZ KENA TROLL 😜","Waduhhh help!!","Bang tolongin aku dong!","Nxzott Mod Menu OP!","Good game","Ada yang iseng nih","Turu zzzz","😎😎😎"}
+coroutine.wrap(function()
+    while wait(2) do
+        if spamchat then
+            local tgt = Players:FindFirstChild(selected.Text)
+            if tgt then
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(chatList[math.random(1,#chatList)], "All")
+            end
+        end
+    end
+end)()
+
+-- NOCLIP (buat kamu sendiri)
+local noclip = false
+local noclipSwitch = Instance.new("TextButton", dialog)
+noclipSwitch.Position = UDim2.new(0,18,0,354)
+noclipSwitch.Size = UDim2.new(1,-36,0,28)
+noclipSwitch.Text = "Noclip (You): OFF"
+noclipSwitch.BackgroundColor3 = DARK
+noclipSwitch.TextColor3 = BTN_OFF
+noclipSwitch.Font = Enum.Font.GothamBold
+noclipSwitch.TextSize = 15
+local noclipCorner = Instance.new("UICorner", noclipSwitch)
+noclipCorner.CornerRadius = UDim.new(0,8)
+noclipSwitch.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    noclipSwitch.Text = "Noclip (You): " .. (noclip and "ON" or "OFF")
+    noclipSwitch.TextColor3 = noclip and BTN_ON or BTN_OFF
+end)
+RS.Stepped:Connect(function()
+    if noclip and lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+        for _,v in pairs(lp.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- TROLLING OFF
+local offBtn = Instance.new("TextButton", dialog)
+offBtn.Position = UDim2.new(0,18,0,390)
+offBtn.Size = UDim2.new(1,-36,0,32)
+offBtn.Text = "TROLLING OFF (Reset Target Effect)"
+offBtn.BackgroundColor3 = ACCENT2
+offBtn.TextColor3 = WHITE
+offBtn.Font = Enum.Font.GothamBlack
+offBtn.TextSize = 15
+local offCorner = Instance.new("UICorner", offBtn)
+offCorner.CornerRadius = UDim.new(0,10)
+offBtn.MouseButton1Click:Connect(function()
+    -- Matikan semua efek ke target
+    loopJump = false
+    jumpBtn.Text = "Spam Jump: OFF"
+    jumpBtn.TextColor3 = BTN_OFF
+    loopSit = false
+    sitBtn.Text = "Spam Sit: OFF"
+    sitBtn.TextColor3 = BTN_OFF
+    loopTp = false
+    loopTpBtn.Text = "Loop Teleport: OFF"
+    loopTpBtn.TextColor3 = BTN_OFF
+    freeze = false
+    freezeBtn.Text = "Freeze: OFF"
+    freezeBtn.TextColor3 = BTN_OFF
+    invisible = false
+    invBtn.Text = "Invisible: OFF"
+    invBtn.TextColor3 = BTN_OFF
+    headless = false
+    headBtn.Text = "Headless: OFF"
+    headBtn.TextColor3 = BTN_OFF
+    spamchat = false
+    chatBtn.Text = "Spam Chat: OFF"
+    chatBtn.TextColor3 = BTN_OFF
+    -- Normalisasi target:
+    local tgt = Players:FindFirstChild(selected.Text)
+    if tgt and tgt.Character then
+        for _,v in pairs(tgt.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.Transparency = 0 end
+            if v:IsA("Decal") then v.Transparency = 0 end
+        end
+        if tgt.Character:FindFirstChild("HumanoidRootPart") then
+            tgt.Character.HumanoidRootPart.Anchored = false
+        end
+    end
+    statusText.Text = "All troll effect to "..(selected.Text or "target").." stopped."
+end)
+
+-- Menu toggle
+menuBtn.MouseButton1Click:Connect(function()
+    if not dialog.Visible then showDialog() else hideDialog() end
+end)
+closeBtn.MouseButton1Click:Connect(hideDialog)
+
+-- End
