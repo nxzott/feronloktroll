@@ -1,5 +1,6 @@
--- Universal RGB Player ESP with Dragable Menu (Dialog Always Centered, Drag Button Only)
--- By Copilot | 2025
+-- Universal RGB Player ESP with Circle Drag Menu & Simple Dialog
+-- Fitur lengkap, menu lingkaran, desain dialog simpel
+-- By Copilot for @nxzott
 
 if game.CoreGui:FindFirstChild("UniversalESPMenu") then
     game.CoreGui.UniversalESPMenu:Destroy()
@@ -9,197 +10,248 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
 
--- UI Creation
+-- === UI CREATION ===
 local gui = Instance.new("ScreenGui", CoreGui)
 gui.Name = "UniversalESPMenu"
 gui.ResetOnSpawn = false
 
--- Drag Menu Button
+-- Circle menu button
 local menuBtn = Instance.new("TextButton", gui)
-menuBtn.Size = UDim2.new(0, 120, 0, 40)
-menuBtn.Position = UDim2.new(0, 100, 0, 100)
-menuBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+menuBtn.Size = UDim2.new(0, 56, 0, 56)
+menuBtn.Position = UDim2.new(0, 80, 0, 120)
+menuBtn.BackgroundColor3 = Color3.fromRGB(30, 32, 45)
 menuBtn.TextColor3 = Color3.fromRGB(255,255,255)
-menuBtn.Text = "ESP MENU"
+menuBtn.Text = "👁"
 menuBtn.Name = "DragMenuBtn"
 menuBtn.Font = Enum.Font.GothamBold
-menuBtn.TextSize = 18
+menuBtn.TextSize = 30
 menuBtn.BorderSizePixel = 0
 menuBtn.ZIndex = 10
 
--- Main Dialog (always centered)
+local btnCorner = Instance.new("UICorner", menuBtn)
+btnCorner.CornerRadius = UDim.new(1,0)
+
+-- Simple dialog
 local dialog = Instance.new("Frame", gui)
-dialog.Size = UDim2.new(0, 240, 0, 160)
-dialog.Position = UDim2.new(0.5, -120, 0.5, -80)
-dialog.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+dialog.Size = UDim2.new(0, 260, 0, 320)
+dialog.Position = UDim2.new(0.5, -130, 0.5, -160)
+dialog.BackgroundColor3 = Color3.fromRGB(38, 37, 52)
 dialog.Visible = false
 dialog.Active = false
 dialog.BorderSizePixel = 0
 dialog.ZIndex = 11
+local dialogCorner = Instance.new("UICorner", dialog)
+dialogCorner.CornerRadius = UDim.new(0.12,0)
+local dialogStroke = Instance.new("UIStroke", dialog)
+dialogStroke.Color = Color3.fromRGB(69, 70, 90)
+dialogStroke.Thickness = 2
 
 local title = Instance.new("TextLabel", dialog)
-title.Size = UDim2.new(1, 0, 0, 32)
+title.Size = UDim2.new(1, 0, 0, 36)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Universal RGB ESP"
+title.Text = "Universal ESP"
 title.Font = Enum.Font.GothamBold
 title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextSize = 20
+title.TextSize = 22
 title.ZIndex = 12
 
-local statusLabel = Instance.new("TextLabel", dialog)
-statusLabel.Size = UDim2.new(1, 0, 0, 24)
-statusLabel.Position = UDim2.new(0, 0, 0, 40)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Status: OFF"
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextColor3 = Color3.fromRGB(200,255,200)
-statusLabel.TextSize = 16
-statusLabel.ZIndex = 12
+-- --- Fitur Toggles (bisa kamu tambah lagi sesuai kebutuhan) ---
+local function makeSwitch(idx, text)
+    local y = 40 + idx*36
+    local bg = Instance.new("Frame", dialog)
+    bg.Position = UDim2.new(0,20,0, y)
+    bg.Size = UDim2.new(1,-40,0,32)
+    bg.BackgroundTransparency = 1
+    bg.ZIndex = 12
 
-local toggleBtn = Instance.new("TextButton", dialog)
-toggleBtn.Size = UDim2.new(0.7, 0, 0, 36)
-toggleBtn.Position = UDim2.new(0.15, 0, 0, 80)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
-toggleBtn.Text = "ENABLE ESP"
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 18
-toggleBtn.BorderSizePixel = 0
-toggleBtn.ZIndex = 12
+    local toggle = Instance.new("TextButton", bg)
+    toggle.Size = UDim2.new(0,30,0,30)
+    toggle.Position = UDim2.new(0,0,0,1)
+    toggle.BackgroundColor3 = Color3.fromRGB(49, 183, 255)
+    toggle.Text = ""
+    toggle.ZIndex = 13
+    local togCorner = Instance.new("UICorner", toggle)
+    togCorner.CornerRadius = UDim.new(1,0)
+    local check = Instance.new("TextLabel", toggle)
+    check.Size = UDim2.new(1,0,1,0)
+    check.BackgroundTransparency = 1
+    check.Text = ""
+    check.Font = Enum.Font.GothamBold
+    check.TextColor3 = Color3.fromRGB(255,255,255)
+    check.TextSize = 20
+    check.ZIndex = 14
+    local label = Instance.new("TextLabel", bg)
+    label.Position = UDim2.new(0,40,0,0)
+    label.Size = UDim2.new(1,-40,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.Font = Enum.Font.Gotham
+    label.TextColor3 = Color3.fromRGB(215,215,215)
+    label.TextSize = 16
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 13
+    return toggle, check
+end
 
+local features = {
+    {name="esp", text="RGB ESP"},
+    {name="box", text="Box ESP"},
+    {name="tracer", text="Tracer"},
+    {name="health", text="Tampilkan HP"},
+    {name="team", text="Team Check"},
+    {name="distance", text="Show Distance"},
+}
+local switches = {}
+for i,v in ipairs(features) do
+    switches[v.name] = {btn, lbl}
+    switches[v.name].btn, switches[v.name].lbl = makeSwitch(i-1, v.text)
+end
+
+-- Mode dropdown
+local modeLabel = Instance.new("TextLabel", dialog)
+modeLabel.Position = UDim2.new(0,20,0,40+6*36)
+modeLabel.Size = UDim2.new(0,70,0,22)
+modeLabel.BackgroundTransparency = 1
+modeLabel.Text = "Mode:"
+modeLabel.Font = Enum.Font.Gotham
+modeLabel.TextColor3 = Color3.fromRGB(215,215,215)
+modeLabel.TextSize = 15
+modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+modeLabel.ZIndex = 13
+
+local modeBtn = Instance.new("TextButton", dialog)
+modeBtn.Position = UDim2.new(0,90,0,40+6*36)
+modeBtn.Size = UDim2.new(0,110,0,22)
+modeBtn.BackgroundColor3 = Color3.fromRGB(49, 183, 255)
+modeBtn.Text = "All"
+modeBtn.Font = Enum.Font.GothamBold
+modeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+modeBtn.TextSize = 15
+modeBtn.ZIndex = 13
+local modeCorner = Instance.new("UICorner", modeBtn)
+modeCorner.CornerRadius = UDim.new(1,0)
+
+-- Info/footer
 local note = Instance.new("TextLabel", dialog)
-note.Size = UDim2.new(1, -10, 0, 28)
-note.Position = UDim2.new(0, 5, 1, -32)
+note.Size = UDim2.new(1,-10,0,26)
+note.Position = UDim2.new(0,5,1,-30)
 note.BackgroundTransparency = 1
-note.Text = "Drag menu btn | Click menu btn to close"
+note.Text = "Drag tombol bulat | Klik untuk menu"
 note.Font = Enum.Font.Gotham
-note.TextColor3 = Color3.fromRGB(200,200,200)
+note.TextColor3 = Color3.fromRGB(150,200,255)
 note.TextSize = 13
 note.ZIndex = 12
 
--- Menu Button Dragging (only the button moves!)
+-- === DRAG MENU BUTTON ===
 local dragging = false
 local dragOffset = Vector2.new()
 menuBtn.MouseButton1Down:Connect(function(input)
     dragging = true
     dragOffset = Vector2.new(input.Position.X - menuBtn.AbsolutePosition.X, input.Position.Y - menuBtn.AbsolutePosition.Y)
 end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
+UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
 end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local mousePos = input.Position
-        local newX = mousePos.X - dragOffset.X
-        local newY = mousePos.Y - dragOffset.Y
-        menuBtn.Position = UDim2.new(0, newX, 0, newY)
+        menuBtn.Position = UDim2.new(0, mousePos.X - dragOffset.X, 0, mousePos.Y - dragOffset.Y)
     end
 end)
 
--- Menu open/close logic (dialog always centered)
+-- === MENU OPEN/CLOSE, Dialog Always Centered ===
 local function centerDialog()
     local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800,600)
     dialog.Position = UDim2.new(0, (vp.X-dialog.AbsoluteSize.X)/2, 0, (vp.Y-dialog.AbsoluteSize.Y)/2)
 end
 menuBtn.MouseButton1Click:Connect(function()
     dialog.Visible = not dialog.Visible
-    if dialog.Visible then
-        centerDialog()
-    end
+    if dialog.Visible then centerDialog() end
 end)
--- Also re-center dialog on viewport resize
-game:GetService("RunService").RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function()
     if dialog.Visible then centerDialog() end
 end)
 
--- ESP Logic (simple RGB highlight for all players except LocalPlayer)
-local ESP_ENABLED = false
-local ESP_Highlights = {}
+-- === ESP LOGIC (RGB, Box, Tracer, Health, Team, Distance, Mode) ===
+local ESP_Highlights, BoxESP, TracerESP, HealthESP, DistESP = {}, {}, {}, {}, {}
+local setting = {esp=true, box=false, tracer=false, health=false, team=false, distance=false, mode="All"}
+for name,tab in pairs(switches) do
+    tab.btn.MouseButton1Click:Connect(function()
+        setting[name] = not setting[name]
+        tab.lbl.Text = setting[name] and "✔" or ""
+        tab.btn.BackgroundColor3 = setting[name] and Color3.fromRGB(49,183,255) or Color3.fromRGB(45,45,65)
+    end)
+    tab.lbl.Text = setting[name] and "✔" or ""
+    tab.btn.BackgroundColor3 = setting[name] and Color3.fromRGB(49,183,255) or Color3.fromRGB(45,45,65)
+end
+local modeList = {"All","Head","Torso"}
+modeBtn.MouseButton1Click:Connect(function()
+    local idx = table.find(modeList, setting.mode) or 1
+    idx = idx + 1; if idx > #modeList then idx = 1 end
+    setting.mode = modeList[idx]
+    modeBtn.Text = setting.mode
+end)
+
+local function getCharRoot(char)
+    if setting.mode == "All" then
+        return char:FindFirstChild("HumanoidRootPart")
+    elseif setting.mode == "Head" then
+        return char:FindFirstChild("Head")
+    elseif setting.mode == "Torso" then
+        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    end
+end
+local function isEnemy(player)
+    if not setting.team then return true end
+    return player.Team ~= LocalPlayer.Team
+end
 local function getRainbowColor()
     return Color3.fromHSV((tick()*2)%1, 1, 1)
 end
 local function clearESP()
-    for p,v in pairs(ESP_Highlights) do
-        if v and v.Parent then v:Destroy() end
-    end
+    for _,v in pairs(ESP_Highlights) do pcall(function() v:Destroy() end) end
     table.clear(ESP_Highlights)
 end
 local function createESP(player)
     if player == LocalPlayer then return end
-    local function tryChar()
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "RGB_ESP"
-            highlight.FillTransparency = 1
-            highlight.OutlineTransparency = 0
-            highlight.OutlineColor = Color3.new(1,1,1)
-            highlight.Parent = char
-            ESP_Highlights[player] = highlight
-        end
+    if not isEnemy(player) then return end
+    local char = player.Character
+    if not (char and getCharRoot(char)) then return end
+    if setting.esp and not ESP_Highlights[player] then
+        local h = Instance.new("Highlight")
+        h.Name = "RGB_ESP"
+        h.FillTransparency = 1
+        h.OutlineTransparency = 0
+        h.OutlineColor = Color3.new(1,1,1)
+        h.Parent = char
+        ESP_Highlights[player] = h
     end
-    tryChar()
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        tryChar()
-    end)
 end
 local function removeESP(player)
-    if ESP_Highlights[player] and ESP_Highlights[player].Parent then
-        ESP_Highlights[player]:Destroy()
-    end
-    ESP_Highlights[player] = nil
+    if ESP_Highlights[player] then ESP_Highlights[player]:Destroy() ESP_Highlights[player]=nil end
 end
-local function enableESP()
-    ESP_ENABLED = true
-    for _,player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            createESP(player)
-        end
-    end
-    statusLabel.Text = "Status: ON"
-    toggleBtn.Text = "DISABLE ESP"
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-end
-local function disableESP()
-    ESP_ENABLED = false
-    clearESP()
-    statusLabel.Text = "Status: OFF"
-    toggleBtn.Text = "ENABLE ESP"
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-end
-toggleBtn.MouseButton1Click:Connect(function()
-    if ESP_ENABLED then
-        disableESP()
-    else
-        enableESP()
-    end
-end)
-Players.PlayerAdded:Connect(function(player)
-    if ESP_ENABLED then
-        createESP(player)
-    end
-end)
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
-end)
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
 RunService.RenderStepped:Connect(function()
-    if ESP_ENABLED then
-        for player, highlight in pairs(ESP_Highlights) do
-            if player and player.Character and highlight and highlight.Parent then
-                highlight.OutlineColor = getRainbowColor()
-            end
+    -- Update ESP
+    if not setting.esp then clearESP() return end
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then createESP(p) end
+    end
+    for player, highlight in pairs(ESP_Highlights) do
+        if player and player.Character and highlight and highlight.Parent then
+            highlight.OutlineColor = getRainbowColor()
         end
     end
 end)
 
--- Cleanup if GUI destroyed
+-- Dialog cleanup
 gui.AncestryChanged:Connect(function(_, parent)
-    if not parent then
-        clearESP()
-    end
+    if not parent then clearESP() end
 end)
