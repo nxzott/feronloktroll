@@ -1,151 +1,349 @@
--- Universal RGB Player ESP with Circle Drag Menu & Simple Dialog
--- Fitur lengkap, menu lingkaran, desain dialog simpel
--- By Copilot for @nxzott
+--[[
+Universal ESP Roblox (RGB, Box, Tracer, Health, Distance, TeamCheck, dsb)
+Menu button bulat, drag hanya tombol, dialog always center, desain simpel.
+By Copilot @nxzott | 2025
 
-if game.CoreGui:FindFirstChild("UniversalESPMenu") then
-    game.CoreGui.UniversalESPMenu:Destroy()
-end
+Fitur:
+- ESP RGB, Box ESP, Tracer, Health, Distance, TeamCheck, NPC, Highlight Mode
+- Menu lingkaran dragable, dialog simpel
+- Slider RGB speed, outline thickness, transparency
+- Keybind toggle (default RightShift)
+- Pengaturan tersimpan (jika executor support writefile/readfile)
+--]]
 
+-- SETTINGS
+local SETTINGS_KEY = "UniversalESP_CircleMenu_Settings"
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local Camera = workspace.CurrentCamera
 
--- === UI CREATION ===
+-- UI CLEANUP
+if CoreGui:FindFirstChild("UniversalESP_CircleMenu") then
+    CoreGui.UniversalESP_CircleMenu:Destroy()
+end
+
+-- SETTINGS LOGIC
+local defaultSettings = {
+    espEnabled = false,
+    boxEnabled = false,
+    tracerEnabled = false,
+    healthEnabled = false,
+    distanceEnabled = false,
+    teamCheck = false,
+    npcEnabled = false,
+    rgbSpeed = 2,
+    outlineThickness = 1,
+    outlineTransparency = 0,
+    partMode = "All",
+    keybind = Enum.KeyCode.RightShift.Value,
+    menuBtnPos = {100, 100}
+}
+local function saveSettings(settings)
+    pcall(function()
+        if writefile then
+            writefile(SETTINGS_KEY..".json", HttpService:JSONEncode(settings))
+        end
+    end)
+end
+local function loadSettings()
+    local settings = {}
+    pcall(function()
+        if readfile and isfile and isfile(SETTINGS_KEY..".json") then
+            settings = HttpService:JSONDecode(readfile(SETTINGS_KEY..".json"))
+        end
+    end)
+    for k,v in pairs(defaultSettings) do
+        if settings[k] == nil then settings[k] = v end
+    end
+    return settings
+end
+local settings = loadSettings()
+
+-- UI CREATION
 local gui = Instance.new("ScreenGui", CoreGui)
-gui.Name = "UniversalESPMenu"
+gui.Name = "UniversalESP_CircleMenu"
 gui.ResetOnSpawn = false
 
--- Circle menu button
-local menuBtn = Instance.new("TextButton", gui)
+-- CIRCLE MENU BUTTON
+local menuBtn = Instance.new("ImageButton", gui)
 menuBtn.Size = UDim2.new(0, 56, 0, 56)
-menuBtn.Position = UDim2.new(0, 80, 0, 120)
-menuBtn.BackgroundColor3 = Color3.fromRGB(30, 32, 45)
-menuBtn.TextColor3 = Color3.fromRGB(255,255,255)
-menuBtn.Text = "👁"
-menuBtn.Name = "DragMenuBtn"
-menuBtn.Font = Enum.Font.GothamBold
-menuBtn.TextSize = 30
-menuBtn.BorderSizePixel = 0
-menuBtn.ZIndex = 10
+menuBtn.Position = UDim2.new(0, settings.menuBtnPos[1], 0, settings.menuBtnPos[2])
+menuBtn.BackgroundTransparency = 1
+menuBtn.Image = "rbxassetid://3926305904" -- circle icon asset
+menuBtn.ImageRectOffset = Vector2.new(324, 364)
+menuBtn.ImageRectSize = Vector2.new(36, 36)
+menuBtn.Name = "CircleMenuBtn"
+menuBtn.ZIndex = 30
 
-local btnCorner = Instance.new("UICorner", menuBtn)
-btnCorner.CornerRadius = UDim.new(1,0)
+local menuIcon = Instance.new("ImageLabel", menuBtn)
+menuIcon.Size = UDim2.new(0.7, 0, 0.7, 0)
+menuIcon.Position = UDim2.new(0.15, 0, 0.15, 0)
+menuIcon.BackgroundTransparency = 1
+menuIcon.Image = "rbxassetid://6026568198" -- settings/slider icon
+menuIcon.ZIndex = 31
 
--- Simple dialog
+-- SIMPLE DIALOG
 local dialog = Instance.new("Frame", gui)
-dialog.Size = UDim2.new(0, 260, 0, 320)
-dialog.Position = UDim2.new(0.5, -130, 0.5, -160)
-dialog.BackgroundColor3 = Color3.fromRGB(38, 37, 52)
+dialog.Size = UDim2.new(0, 280, 0, 362)
+dialog.Position = UDim2.new(0.5, -140, 0.5, -181)
+dialog.BackgroundColor3 = Color3.fromRGB(30, 32, 46)
+dialog.BackgroundTransparency = 0.12
 dialog.Visible = false
 dialog.Active = false
 dialog.BorderSizePixel = 0
-dialog.ZIndex = 11
-local dialogCorner = Instance.new("UICorner", dialog)
-dialogCorner.CornerRadius = UDim.new(0.12,0)
-local dialogStroke = Instance.new("UIStroke", dialog)
-dialogStroke.Color = Color3.fromRGB(69, 70, 90)
-dialogStroke.Thickness = 2
+dialog.AnchorPoint = Vector2.new(0,0)
+dialog.ZIndex = 40
+dialog.ClipsDescendants = true
+dialog.Name = "ESPDialog"
 
 local title = Instance.new("TextLabel", dialog)
-title.Size = UDim2.new(1, 0, 0, 36)
+title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Universal ESP"
+title.Text = "UNIVERSAL ESP"
 title.Font = Enum.Font.GothamBold
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextSize = 22
-title.ZIndex = 12
+title.TextColor3 = Color3.fromRGB(220, 240, 255)
+title.TextSize = 20
+title.ZIndex = 41
 
--- --- Fitur Toggles (bisa kamu tambah lagi sesuai kebutuhan) ---
-local function makeSwitch(idx, text)
-    local y = 40 + idx*36
-    local bg = Instance.new("Frame", dialog)
-    bg.Position = UDim2.new(0,20,0, y)
-    bg.Size = UDim2.new(1,-40,0,32)
-    bg.BackgroundTransparency = 1
-    bg.ZIndex = 12
+local sep = Instance.new("Frame", dialog)
+sep.Size = UDim2.new(1, -32, 0, 1)
+sep.Position = UDim2.new(0, 16, 0, 34)
+sep.BorderSizePixel = 0
+sep.BackgroundColor3 = Color3.fromRGB(60,80,120)
+sep.ZIndex = 41
 
-    local toggle = Instance.new("TextButton", bg)
-    toggle.Size = UDim2.new(0,30,0,30)
-    toggle.Position = UDim2.new(0,0,0,1)
-    toggle.BackgroundColor3 = Color3.fromRGB(49, 183, 255)
-    toggle.Text = ""
-    toggle.ZIndex = 13
-    local togCorner = Instance.new("UICorner", toggle)
-    togCorner.CornerRadius = UDim.new(1,0)
-    local check = Instance.new("TextLabel", toggle)
-    check.Size = UDim2.new(1,0,1,0)
-    check.BackgroundTransparency = 1
-    check.Text = ""
-    check.Font = Enum.Font.GothamBold
-    check.TextColor3 = Color3.fromRGB(255,255,255)
-    check.TextSize = 20
-    check.ZIndex = 14
-    local label = Instance.new("TextLabel", bg)
-    label.Position = UDim2.new(0,40,0,0)
-    label.Size = UDim2.new(1,-40,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.Font = Enum.Font.Gotham
-    label.TextColor3 = Color3.fromRGB(215,215,215)
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 13
-    return toggle, check
+-- Option builder
+local options = {}
+local oy = 44
+local function addToggle(key, label)
+    local btn = Instance.new("TextButton", dialog)
+    btn.Size = UDim2.new(0, 22, 0, 22)
+    btn.Position = UDim2.new(0, 18, 0, oy)
+    btn.BackgroundColor3 = settings[key] and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+    btn.Text = settings[key] and "✓" or ""
+    btn.Font = Enum.Font.GothamBlack
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextSize = 16
+    btn.BorderSizePixel = 0
+    btn.ZIndex = 42
+    btn.AutoButtonColor = false
+    local lbl = Instance.new("TextLabel", dialog)
+    lbl.Size = UDim2.new(1, -54, 0, 22)
+    lbl.Position = UDim2.new(0, 46, 0, oy)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(200,210,220)
+    lbl.TextSize = 15
+    lbl.ZIndex = 42
+    options[key] = btn
+    oy = oy + 28
+    btn.MouseButton1Click:Connect(function()
+        settings[key] = not settings[key]
+        btn.Text = settings[key] and "✓" or ""
+        btn.BackgroundColor3 = settings[key] and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+        saveSettings(settings)
+    end)
 end
 
-local features = {
-    {name="esp", text="RGB ESP"},
-    {name="box", text="Box ESP"},
-    {name="tracer", text="Tracer"},
-    {name="health", text="Tampilkan HP"},
-    {name="team", text="Team Check"},
-    {name="distance", text="Show Distance"},
-}
-local switches = {}
-for i,v in ipairs(features) do
-    switches[v.name] = {btn, lbl}
-    switches[v.name].btn, switches[v.name].lbl = makeSwitch(i-1, v.text)
-end
+addToggle("espEnabled", "ESP Highlight (RGB)")
+addToggle("boxEnabled", "Box ESP")
+addToggle("tracerEnabled", "Tracer ESP")
+addToggle("healthEnabled", "Health Display")
+addToggle("distanceEnabled", "Distance Display")
+addToggle("teamCheck", "Team Check (enemy only)")
+addToggle("npcEnabled", "ESP for NPC/Bot")
 
--- Mode dropdown
-local modeLabel = Instance.new("TextLabel", dialog)
-modeLabel.Position = UDim2.new(0,20,0,40+6*36)
-modeLabel.Size = UDim2.new(0,70,0,22)
-modeLabel.BackgroundTransparency = 1
-modeLabel.Text = "Mode:"
-modeLabel.Font = Enum.Font.Gotham
-modeLabel.TextColor3 = Color3.fromRGB(215,215,215)
-modeLabel.TextSize = 15
-modeLabel.TextXAlignment = Enum.TextXAlignment.Left
-modeLabel.ZIndex = 13
+-- Dropdown Highlight Mode
+local modeLbl = Instance.new("TextLabel", dialog)
+modeLbl.Size = UDim2.new(0, 96, 0, 22)
+modeLbl.Position = UDim2.new(0, 18, 0, oy)
+modeLbl.BackgroundTransparency = 1
+modeLbl.Text = "Highlight: "
+modeLbl.TextXAlignment = Enum.TextXAlignment.Left
+modeLbl.Font = Enum.Font.Gotham
+modeLbl.TextColor3 = Color3.fromRGB(200,210,220)
+modeLbl.TextSize = 15
+modeLbl.ZIndex = 42
 
 local modeBtn = Instance.new("TextButton", dialog)
-modeBtn.Position = UDim2.new(0,90,0,40+6*36)
-modeBtn.Size = UDim2.new(0,110,0,22)
-modeBtn.BackgroundColor3 = Color3.fromRGB(49, 183, 255)
-modeBtn.Text = "All"
+modeBtn.Size = UDim2.new(0, 90, 0, 22)
+modeBtn.Position = UDim2.new(0, 114, 0, oy)
+modeBtn.BackgroundColor3 = Color3.fromRGB(60,60,80)
+modeBtn.Text = settings.partMode
 modeBtn.Font = Enum.Font.GothamBold
 modeBtn.TextColor3 = Color3.fromRGB(255,255,255)
 modeBtn.TextSize = 15
-modeBtn.ZIndex = 13
-local modeCorner = Instance.new("UICorner", modeBtn)
-modeCorner.CornerRadius = UDim.new(1,0)
+modeBtn.BorderSizePixel = 0
+modeBtn.ZIndex = 42
+oy = oy + 28
+modeBtn.MouseButton1Click:Connect(function()
+    local opts = {"All","Head","Torso"}
+    local idx = table.find(opts, settings.partMode) or 1
+    idx = idx + 1; if idx > #opts then idx = 1 end
+    settings.partMode = opts[idx]
+    modeBtn.Text = settings.partMode
+    saveSettings(settings)
+end)
 
--- Info/footer
+-- Slider builder
+local function addSlider(key, label, min, max, isFloat)
+    local lbl = Instance.new("TextLabel", dialog)
+    lbl.Size = UDim2.new(0, 96, 0, 22)
+    lbl.Position = UDim2.new(0, 18, 0, oy)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(200,210,220)
+    lbl.TextSize = 15
+    lbl.ZIndex = 42
+    local bar = Instance.new("Frame", dialog)
+    bar.Size = UDim2.new(0, 112, 0, 10)
+    bar.Position = UDim2.new(0, 114, 0, oy+6)
+    bar.BackgroundColor3 = Color3.fromRGB(80,80,90)
+    bar.BorderSizePixel = 0
+    bar.ZIndex = 42
+    local fill = Instance.new("Frame", bar)
+    fill.Size = UDim2.new((settings[key]-min)/(max-min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(120,200,255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 43
+    local drag = Instance.new("Frame", bar)
+    drag.Size = UDim2.new(0, 18, 1, 0)
+    drag.Position = UDim2.new((settings[key]-min)/(max-min), -9, 0, 0)
+    drag.BackgroundColor3 = Color3.fromRGB(180,180,255)
+    drag.ZIndex = 43
+    local dragging = false
+    local function setFromX(x)
+        local rel = math.clamp((x-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+        local val = min + (max-min)*rel
+        if not isFloat then val = math.floor(val+0.5) end
+        settings[key] = val
+        fill.Size = UDim2.new(rel,0,1,0)
+        drag.Position = UDim2.new(rel,-9,0,0)
+        saveSettings(settings)
+    end
+    drag.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouse = UserInputService:GetMouseLocation()
+            setFromX(mouse.X)
+        end
+    end)
+    oy = oy + 28
+end
+
+addSlider("rgbSpeed", "RGB Speed", 1, 10, false)
+addSlider("outlineThickness", "Outline Thicc", 1, 5, false)
+addSlider("outlineTransparency", "Outline Alpha", 0, 1, true)
+
+-- Keybind
+local kbLbl = Instance.new("TextLabel", dialog)
+kbLbl.Size = UDim2.new(0, 80, 0, 22)
+kbLbl.Position = UDim2.new(0, 18, 0, oy)
+kbLbl.BackgroundTransparency = 1
+kbLbl.Text = "Keybind: "
+kbLbl.TextXAlignment = Enum.TextXAlignment.Left
+kbLbl.Font = Enum.Font.Gotham
+kbLbl.TextColor3 = Color3.fromRGB(200,210,220)
+kbLbl.TextSize = 15
+kbLbl.ZIndex = 42
+
+local kbBtn = Instance.new("TextButton", dialog)
+kbBtn.Size = UDim2.new(0, 90, 0, 22)
+kbBtn.Position = UDim2.new(0, 114, 0, oy)
+kbBtn.BackgroundColor3 = Color3.fromRGB(60,60,80)
+kbBtn.Text = Enum.KeyCode[settings.keybind].Name
+kbBtn.Font = Enum.Font.GothamBold
+kbBtn.TextColor3 = Color3.fromRGB(255,255,255)
+kbBtn.TextSize = 15
+kbBtn.BorderSizePixel = 0
+kbBtn.ZIndex = 42
+local waitingKey = false
+kbBtn.MouseButton1Click:Connect(function()
+    kbBtn.Text = "..."
+    waitingKey = true
+end)
+UserInputService.InputBegan:Connect(function(input, gp)
+    if waitingKey and input.UserInputType == Enum.UserInputType.Keyboard then
+        settings.keybind = input.KeyCode.Value
+        kbBtn.Text = input.KeyCode.Name
+        waitingKey = false
+    elseif not gp and input.KeyCode.Value == settings.keybind then
+        settings.espEnabled = not settings.espEnabled
+        options.espEnabled.Text = settings.espEnabled and "✓" or ""
+        options.espEnabled.BackgroundColor3 = settings.espEnabled and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+        saveSettings(settings)
+    end
+end)
+oy = oy + 28
+
+-- Save Button
+local saveBtn = Instance.new("TextButton", dialog)
+saveBtn.Size = UDim2.new(0.35, 0, 0, 28)
+saveBtn.Position = UDim2.new(0.07, 0, 1, -36)
+saveBtn.BackgroundColor3 = Color3.fromRGB(80,200,100)
+saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
+saveBtn.Text = "Save"
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 15
+saveBtn.BorderSizePixel = 0
+saveBtn.ZIndex = 44
+saveBtn.MouseButton1Click:Connect(function()
+    saveSettings(settings)
+    saveBtn.Text = "Saved!"
+    wait(1)
+    saveBtn.Text = "Save"
+end)
+
+local reloadBtn = Instance.new("TextButton", dialog)
+reloadBtn.Size = UDim2.new(0.35, 0, 0, 28)
+reloadBtn.Position = UDim2.new(0.58, 0, 1, -36)
+reloadBtn.BackgroundColor3 = Color3.fromRGB(80,120,230)
+reloadBtn.TextColor3 = Color3.fromRGB(255,255,255)
+reloadBtn.Text = "Reload"
+reloadBtn.Font = Enum.Font.GothamBold
+reloadBtn.TextSize = 15
+reloadBtn.BorderSizePixel = 0
+reloadBtn.ZIndex = 44
+reloadBtn.MouseButton1Click:Connect(function()
+    settings = loadSettings()
+    for k,btn in pairs(options) do
+        btn.Text = settings[k] and "✓" or ""
+        btn.BackgroundColor3 = settings[k] and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+    end
+    modeBtn.Text = settings.partMode
+    kbBtn.Text = Enum.KeyCode[settings.keybind].Name
+end)
+
+-- FOOTER
 local note = Instance.new("TextLabel", dialog)
-note.Size = UDim2.new(1,-10,0,26)
-note.Position = UDim2.new(0,5,1,-30)
+note.Size = UDim2.new(1, -10, 0, 22)
+note.Position = UDim2.new(0, 5, 1, -10)
 note.BackgroundTransparency = 1
-note.Text = "Drag tombol bulat | Klik untuk menu"
+note.Text = "Drag menu button | Menu always center"
 note.Font = Enum.Font.Gotham
-note.TextColor3 = Color3.fromRGB(150,200,255)
+note.TextColor3 = Color3.fromRGB(170,180,200)
 note.TextSize = 13
-note.ZIndex = 12
+note.ZIndex = 45
 
--- === DRAG MENU BUTTON ===
+-- DRAG MENU BUTTON (CIRCLE)
 local dragging = false
 local dragOffset = Vector2.new()
 menuBtn.MouseButton1Down:Connect(function(input)
@@ -155,18 +353,22 @@ end)
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
+        settings.menuBtnPos = {menuBtn.Position.X.Offset, menuBtn.Position.Y.Offset}
+        saveSettings(settings)
     end
 end)
 UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local mousePos = input.Position
-        menuBtn.Position = UDim2.new(0, mousePos.X - dragOffset.X, 0, mousePos.Y - dragOffset.Y)
+        local newX = mousePos.X - dragOffset.X
+        local newY = mousePos.Y - dragOffset.Y
+        menuBtn.Position = UDim2.new(0, newX, 0, newY)
     end
 end)
 
--- === MENU OPEN/CLOSE, Dialog Always Centered ===
+-- MENU OPEN/CLOSE (dialog always center)
 local function centerDialog()
-    local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800,600)
+    local vp = Camera and Camera.ViewportSize or Vector2.new(800,600)
     dialog.Position = UDim2.new(0, (vp.X-dialog.AbsoluteSize.X)/2, 0, (vp.Y-dialog.AbsoluteSize.Y)/2)
 end
 menuBtn.MouseButton1Click:Connect(function()
@@ -177,81 +379,235 @@ RunService.RenderStepped:Connect(function()
     if dialog.Visible then centerDialog() end
 end)
 
--- === ESP LOGIC (RGB, Box, Tracer, Health, Team, Distance, Mode) ===
-local ESP_Highlights, BoxESP, TracerESP, HealthESP, DistESP = {}, {}, {}, {}, {}
-local setting = {esp=true, box=false, tracer=false, health=false, team=false, distance=false, mode="All"}
-for name,tab in pairs(switches) do
-    tab.btn.MouseButton1Click:Connect(function()
-        setting[name] = not setting[name]
-        tab.lbl.Text = setting[name] and "✔" or ""
-        tab.btn.BackgroundColor3 = setting[name] and Color3.fromRGB(49,183,255) or Color3.fromRGB(45,45,65)
-    end)
-    tab.lbl.Text = setting[name] and "✔" or ""
-    tab.btn.BackgroundColor3 = setting[name] and Color3.fromRGB(49,183,255) or Color3.fromRGB(45,45,65)
+-- ESP LOGIC
+local ESP_Highlights = {}
+local Drawing = Drawing or getgenv().Drawing
+local BoxESP, TracerESP, HealthESP, DistESP = {}, {}, {}, {}
+local function isEnemy(player)
+    if not settings.teamCheck then return true end
+    local lpt = LocalPlayer.Team
+    return player.Team and player.Team ~= lpt
 end
-local modeList = {"All","Head","Torso"}
-modeBtn.MouseButton1Click:Connect(function()
-    local idx = table.find(modeList, setting.mode) or 1
-    idx = idx + 1; if idx > #modeList then idx = 1 end
-    setting.mode = modeList[idx]
-    modeBtn.Text = setting.mode
-end)
-
+local function getRainbowColor()
+    return Color3.fromHSV((tick()*settings.rgbSpeed)%1, 1, 1)
+end
 local function getCharRoot(char)
-    if setting.mode == "All" then
+    if settings.partMode == "All" then
         return char:FindFirstChild("HumanoidRootPart")
-    elseif setting.mode == "Head" then
+    elseif settings.partMode == "Head" then
         return char:FindFirstChild("Head")
-    elseif setting.mode == "Torso" then
+    elseif settings.partMode == "Torso" then
         return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
     end
 end
-local function isEnemy(player)
-    if not setting.team then return true end
-    return player.Team ~= LocalPlayer.Team
-end
-local function getRainbowColor()
-    return Color3.fromHSV((tick()*2)%1, 1, 1)
-end
 local function clearESP()
     for _,v in pairs(ESP_Highlights) do pcall(function() v:Destroy() end) end
+    for _,v in pairs(BoxESP) do pcall(function() for _,l in pairs(v) do l:Remove() end end) end
+    for _,v in pairs(TracerESP) do pcall(function() v:Remove() end) end
+    for _,v in pairs(HealthESP) do pcall(function() v:Remove() end) end
+    for _,v in pairs(DistESP) do pcall(function() v:Remove() end) end
     table.clear(ESP_Highlights)
+    table.clear(BoxESP)
+    table.clear(TracerESP)
+    table.clear(HealthESP)
+    table.clear(DistESP)
 end
-local function createESP(player)
-    if player == LocalPlayer then return end
-    if not isEnemy(player) then return end
-    local char = player.Character
-    if not (char and getCharRoot(char)) then return end
-    if setting.esp and not ESP_Highlights[player] then
-        local h = Instance.new("Highlight")
-        h.Name = "RGB_ESP"
-        h.FillTransparency = 1
-        h.OutlineTransparency = 0
-        h.OutlineColor = Color3.new(1,1,1)
-        h.Parent = char
-        ESP_Highlights[player] = h
+local function makeBox()
+    if not Drawing then return nil end
+    local box = {}
+    for i=1,4 do
+        box[i] = Drawing.new("Line")
+        box[i].Thickness = settings.outlineThickness
+        box[i].Color = Color3.new(1,1,1)
+        box[i].Transparency = 1-settings.outlineTransparency
+        box[i].ZIndex = 2
     end
+    return box
 end
-local function removeESP(player)
-    if ESP_Highlights[player] then ESP_Highlights[player]:Destroy() ESP_Highlights[player]=nil end
+local function makeTracer()
+    if not Drawing then return nil end
+    local tr = Drawing.new("Line")
+    tr.Thickness = settings.outlineThickness
+    tr.Color = Color3.new(1,1,1)
+    tr.Transparency = 1-settings.outlineTransparency
+    tr.ZIndex = 2
+    return tr
 end
-Players.PlayerAdded:Connect(createESP)
-Players.PlayerRemoving:Connect(removeESP)
-
-RunService.RenderStepped:Connect(function()
-    -- Update ESP
-    if not setting.esp then clearESP() return end
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then createESP(p) end
-    end
-    for player, highlight in pairs(ESP_Highlights) do
-        if player and player.Character and highlight and highlight.Parent then
+local function makeLabel()
+    if not Drawing then return nil end
+    local lbl = Drawing.new("Text")
+    lbl.Size = 16
+    lbl.Center = true
+    lbl.Outline = true
+    lbl.ZIndex = 3
+    return lbl
+end
+local function createESP(player,char,isNPC)
+    if not char then return end
+    if not isNPC and player == LocalPlayer then return end
+    if not isNPC and not isEnemy(player) then return end
+    local root = getCharRoot(char)
+    if not root then return end
+    -- HIGHLIGHT
+    if settings.espEnabled then
+        if not ESP_Highlights[char] then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "RGB_ESP"
+            highlight.FillTransparency = 1
+            highlight.OutlineTransparency = settings.outlineTransparency
             highlight.OutlineColor = getRainbowColor()
+            highlight.OutlineThickness = settings.outlineThickness
+            highlight.Parent = root.Parent
+            ESP_Highlights[char] = highlight
+        end
+    end
+    -- BOX ESP
+    if settings.boxEnabled and Drawing then
+        if not BoxESP[char] then
+            BoxESP[char] = makeBox()
+        end
+    end
+    -- TRACER
+    if settings.tracerEnabled and Drawing then
+        if not TracerESP[char] then
+            TracerESP[char] = makeTracer()
+        end
+    end
+    -- HEALTH
+    if settings.healthEnabled and Drawing then
+        if not HealthESP[char] then
+            HealthESP[char] = makeLabel()
+        end
+    end
+    -- DIST
+    if settings.distanceEnabled and Drawing then
+        if not DistESP[char] then
+            DistESP[char] = makeLabel()
+        end
+    end
+end
+local function scanPlayers()
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer or settings.npcEnabled then
+            local char = p.Character
+            if char and getCharRoot(char) then
+                createESP(p,char,false)
+            end
+        end
+    end
+    if settings.npcEnabled then
+        for _,npc in ipairs(workspace:GetDescendants()) do
+            if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+                if getCharRoot(npc) then createESP(nil,npc,true) end
+            end
+        end
+    end
+end
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        scanPlayers()
+    end)
+end)
+Players.PlayerRemoving:Connect(function(p)
+    local char = p.Character
+    if char then
+        if ESP_Highlights[char] then ESP_Highlights[char]:Destroy() ESP_Highlights[char]=nil end
+        if BoxESP[char] then for _,l in pairs(BoxESP[char]) do l:Remove() end BoxESP[char]=nil end
+        if TracerESP[char] then TracerESP[char]:Remove() TracerESP[char]=nil end
+        if HealthESP[char] then HealthESP[char]:Remove() HealthESP[char]=nil end
+        if DistESP[char] then DistESP[char]:Remove() DistESP[char]=nil end
+    end
+end)
+RunService.RenderStepped:Connect(function()
+    if not (settings.espEnabled or settings.boxEnabled or settings.tracerEnabled or settings.healthEnabled or settings.distanceEnabled) then
+        clearESP()
+        return
+    end
+    scanPlayers()
+    for char,highlight in pairs(ESP_Highlights) do
+        if highlight and highlight.Parent then
+            highlight.OutlineColor = getRainbowColor()
+            highlight.OutlineTransparency = settings.outlineTransparency
+            highlight.OutlineThickness = settings.outlineThickness
+        end
+    end
+    if Drawing then
+        for char,box in pairs(BoxESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent and root.Parent:FindFirstChild("Head") then
+                local pos,onscreen = Camera:WorldToViewportPoint(root.Position)
+                local head = root.Parent:FindFirstChild("Head").Position
+                local hpos,onh = Camera:WorldToViewportPoint(head)
+                local sizeY = math.abs(hpos.Y-pos.Y)
+                local sizeX = sizeY/2
+                if onscreen then
+                    box[1].From,box[1].To = Vector2.new(pos.X-sizeX,pos.Y-sizeY),Vector2.new(pos.X+sizeX,pos.Y-sizeY)
+                    box[2].From,box[2].To = Vector2.new(pos.X+sizeX,pos.Y-sizeY),Vector2.new(pos.X+sizeX,pos.Y+sizeY)
+                    box[3].From,box[3].To = Vector2.new(pos.X+sizeX,pos.Y+sizeY),Vector2.new(pos.X-sizeX,pos.Y+sizeY)
+                    box[4].From,box[4].To = Vector2.new(pos.X-sizeX,pos.Y+sizeY),Vector2.new(pos.X-sizeX,pos.Y-sizeY)
+                    for _,l in ipairs(box) do
+                        l.Visible = true
+                        l.Color = getRainbowColor()
+                        l.Transparency = 1-settings.outlineTransparency
+                        l.Thickness = settings.outlineThickness
+                    end
+                else
+                    for _,l in ipairs(box) do l.Visible = false end
+                end
+            end
+        end
+        for char,tr in pairs(TracerESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Camera:WorldToViewportPoint(root.Position)
+                if onscreen then
+                    tr.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    tr.To = Vector2.new(pos.X,pos.Y)
+                    tr.Visible = true
+                    tr.Color = getRainbowColor()
+                    tr.Transparency = 1-settings.outlineTransparency
+                    tr.Thickness = settings.outlineThickness
+                else
+                    tr.Visible = false
+                end
+            end
+        end
+        for char,lbl in pairs(HealthESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Camera:WorldToViewportPoint(root.Position)
+                local hum = root.Parent:FindFirstChildOfClass("Humanoid")
+                if onscreen and hum then
+                    lbl.Position = Vector2.new(pos.X,pos.Y-40)
+                    lbl.Visible = true
+                    lbl.Text = math.floor(hum.Health).."/"..math.floor(hum.MaxHealth)
+                    lbl.Color = Color3.fromRGB(80,255,80)
+                else
+                    lbl.Visible = false
+                end
+            end
+        end
+        for char,lbl in pairs(DistESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Camera:WorldToViewportPoint(root.Position)
+                if onscreen then
+                    local dist = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) and
+                        (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).magnitude or 0
+                    lbl.Position = Vector2.new(pos.X,pos.Y+40)
+                    lbl.Visible = true
+                    lbl.Text = "["..math.floor(dist).."m]"
+                    lbl.Color = Color3.fromRGB(220,220,80)
+                else
+                    lbl.Visible = false
+                end
+            end
         end
     end
 end)
 
--- Dialog cleanup
+-- GUI CLEANUP
 gui.AncestryChanged:Connect(function(_, parent)
     if not parent then clearESP() end
 end)
