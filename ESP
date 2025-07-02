@@ -1,0 +1,723 @@
+--[[
+  UNIVERSAL RGB PLAYER ESP SCRIPT + ADVANCED MOD MENU
+  Features:
+    - RGB Player ESP (Highlight)
+    - Box ESP (Drawing boxes around players)
+    - Tracer ESP (Line from your screen to player)
+    - Health Display (shows HP above ESP)
+    - Team Check (toggle ESP for enemies only / all)
+    - Distance Display (shows distance to player)
+    - Custom RGB speed (slider)
+    - ESP for NPCs (toggle option)
+    - Body part ESP selection (All, Head, Torso)
+    - Save settings (button, reloads on script re-exec)
+    - Transparency & Outline thickness sliders
+    - Dragable menu button, dialog always centered to screen
+    - Toggle ESP via keybind (default RightShift)
+    - Easy menu (open/close via menu button)
+  Note: Script universal for all games that support Highlight & Drawing APIs.
+  Script by Copilot for @nxzott | Last update: 2025-07-02
+--]]
+
+-- SETTINGS STORAGE
+local SETTINGS_KEY = "UniversalESP_Settings"
+
+-- SERVICES
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+-- UI CLEANUP
+if CoreGui:FindFirstChild("UniversalESPMenu") then
+    CoreGui.UniversalESPMenu:Destroy()
+end
+
+-- SAVE/LOAD SETTINGS
+local defaultSettings = {
+    espEnabled = false,
+    boxEnabled = false,
+    tracersEnabled = false,
+    healthEnabled = false,
+    teamCheck = false,
+    distanceEnabled = false,
+    rgbSpeed = 2,
+    npcEnabled = false,
+    partMode = "All", -- All/Head/Torso
+    outlineTransparency = 0,
+    outlineThickness = 1,
+    keybind = Enum.KeyCode.RightShift.Value,
+    menuBtnPos = {100, 100},
+}
+
+local function saveSettings(settings)
+    pcall(function()
+        if writefile then
+            writefile(SETTINGS_KEY..".json", HttpService:JSONEncode(settings))
+        end
+    end)
+end
+
+local function loadSettings()
+    local settings = {}
+    pcall(function()
+        if readfile and isfile and isfile(SETTINGS_KEY..".json") then
+            settings = HttpService:JSONDecode(readfile(SETTINGS_KEY..".json"))
+        end
+    end)
+    for k,v in pairs(defaultSettings) do
+        if settings[k] == nil then settings[k] = v end
+    end
+    return settings
+end
+
+local settings = loadSettings()
+
+-- UI CREATION
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "UniversalESPMenu"
+gui.ResetOnSpawn = false
+
+local menuBtn = Instance.new("TextButton", gui)
+menuBtn.Size = UDim2.new(0, 120, 0, 40)
+menuBtn.Position = UDim2.new(0, settings.menuBtnPos[1], 0, settings.menuBtnPos[2])
+menuBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+menuBtn.TextColor3 = Color3.fromRGB(255,255,255)
+menuBtn.Text = "ESP MENU"
+menuBtn.Name = "DragMenuBtn"
+menuBtn.Font = Enum.Font.GothamBold
+menuBtn.TextSize = 18
+menuBtn.BorderSizePixel = 0
+menuBtn.ZIndex = 10
+
+local dialog = Instance.new("Frame", gui)
+dialog.Size = UDim2.new(0, 340, 0, 420)
+dialog.Position = UDim2.new(0.5, -170, 0.5, -210)
+dialog.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+dialog.Visible = false
+dialog.Active = false
+dialog.BorderSizePixel = 0
+dialog.ZIndex = 11
+
+local function addLabel(parent, name, text, y)
+    local l = Instance.new("TextLabel", parent)
+    l.Name = name
+    l.Size = UDim2.new(1, -20, 0, 24)
+    l.Position = UDim2.new(0, 10, 0, y)
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.Font = Enum.Font.GothamBold
+    l.TextColor3 = Color3.new(1,1,1)
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextSize = 17
+    l.ZIndex = 12
+    return l
+end
+
+local function addToggle(parent, name, text, y, state)
+    local t = Instance.new("TextButton", parent)
+    t.Name = name
+    t.Size = UDim2.new(0, 24, 0, 24)
+    t.Position = UDim2.new(0, 10, 0, y)
+    t.BackgroundColor3 = state and Color3.fromRGB(60, 180, 60) or Color3.fromRGB(50,50,50)
+    t.Text = ""
+    t.ZIndex = 13
+    local check = Instance.new("TextLabel", t)
+    check.Size = UDim2.new(1,0,1,0)
+    check.BackgroundTransparency = 1
+    check.Text = state and "✔" or ""
+    check.Font = Enum.Font.GothamBold
+    check.TextColor3 = Color3.new(1,1,1)
+    check.TextSize = 18
+    check.ZIndex = 14
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Size = UDim2.new(1, -40, 0, 24)
+    lbl.Position = UDim2.new(0, 40, 0, y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(200,200,200)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextSize = 16
+    lbl.ZIndex = 13
+    return t, check
+end
+
+local function addSlider(parent, name, text, y, min, max, value)
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Name = name.."Label"
+    lbl.Size = UDim2.new(0.45, 0, 0, 24)
+    lbl.Position = UDim2.new(0, 10, 0, y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text.." ("..value..")"
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(200,200,200)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextSize = 15
+    lbl.ZIndex = 13
+    local bar = Instance.new("Frame", parent)
+    bar.Name = name.."Bar"
+    bar.Size = UDim2.new(0.45, 0, 0, 12)
+    bar.Position = UDim2.new(0.5, 0, 0, y+6)
+    bar.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    bar.ZIndex = 13
+    local fill = Instance.new("Frame", bar)
+    fill.Name = "Fill"
+    fill.Size = UDim2.new((value-min)/(max-min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(120,200,255)
+    fill.ZIndex = 14
+    fill.BorderSizePixel = 0
+    local drag = Instance.new("TextButton", bar)
+    drag.Size = UDim2.new(0, 20, 1, 0)
+    drag.Position = UDim2.new((value-min)/(max-min), -10, 0, 0)
+    drag.BackgroundColor3 = Color3.fromRGB(180,180,255)
+    drag.BorderSizePixel = 0
+    drag.Text = ""
+    drag.ZIndex = 15
+    drag.AutoButtonColor = false
+    return lbl, bar, fill, drag
+end
+
+local function addDropdown(parent, name, text, y, options, selected)
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Name = name.."Label"
+    lbl.Size = UDim2.new(0.44, 0, 0, 24)
+    lbl.Position = UDim2.new(0, 10, 0, y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextColor3 = Color3.fromRGB(200,200,200)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextSize = 15
+    lbl.ZIndex = 13
+    local dd = Instance.new("TextButton", parent)
+    dd.Name = name.."Dropdown"
+    dd.Size = UDim2.new(0.45, 0, 0, 24)
+    dd.Position = UDim2.new(0.5, 0, 0, y)
+    dd.BackgroundColor3 = Color3.fromRGB(60,60,80)
+    dd.Text = selected
+    dd.Font = Enum.Font.GothamBold
+    dd.TextColor3 = Color3.fromRGB(255,255,255)
+    dd.TextSize = 15
+    dd.ZIndex = 13
+    return dd
+end
+
+-- TOP TITLE
+local title = addLabel(dialog,"Title","Universal RGB ESP - Advanced", 10)
+
+-- TOGGLES (Y increments 36)
+local y = 50
+local toggles = {}
+local function addToggleOpt(name, txt, settingKey)
+    local t, check = addToggle(dialog, name, txt, y, settings[settingKey])
+    toggles[#toggles+1] = {btn=t, check=check, key=settingKey}
+    y = y + 36
+end
+addToggleOpt("ESPToggle","Enable ESP (Highlight)","espEnabled")
+addToggleOpt("BoxToggle","Box ESP","boxEnabled")
+addToggleOpt("TracerToggle","Tracer ESP","tracersEnabled")
+addToggleOpt("HealthToggle","Health Display","healthEnabled")
+addToggleOpt("TeamToggle","Team Check (enemies only)","teamCheck")
+addToggleOpt("DistToggle","Distance Display","distanceEnabled")
+addToggleOpt("NPCtoggle","ESP for NPCs","npcEnabled")
+
+-- DROPDOWN for body part mode
+local partDropdown = addDropdown(dialog, "PartMode", "Highlight Mode", y, {"All","Head","Torso"}, settings.partMode)
+y = y + 36
+
+-- SLIDERS
+local rgbLbl, rgbBar, rgbFill, rgbDrag = addSlider(dialog, "RGBSpeed", "RGB Speed", y, 1, 10, settings.rgbSpeed)
+y = y + 36
+local transpLbl, transpBar, transpFill, transpDrag = addSlider(dialog, "OutlineTransp", "Outline Transparency", y, 0, 1, settings.outlineTransparency)
+y = y + 36
+local thickLbl, thickBar, thickFill, thickDrag = addSlider(dialog, "OutlineThick", "Outline Thickness", y, 1, 5, settings.outlineThickness)
+y = y + 36
+
+-- KEYBIND
+local kbLbl = Instance.new("TextLabel", dialog)
+kbLbl.Size = UDim2.new(0.7, 0, 0, 24)
+kbLbl.Position = UDim2.new(0, 10, 0, y)
+kbLbl.BackgroundTransparency = 1
+kbLbl.Text = "ESP Toggle Key:"
+kbLbl.Font = Enum.Font.Gotham
+kbLbl.TextColor3 = Color3.fromRGB(200,200,200)
+kbLbl.TextSize = 15
+kbLbl.ZIndex = 13
+
+local kbBtn = Instance.new("TextButton", dialog)
+kbBtn.Size = UDim2.new(0.25, 0, 0, 24)
+kbBtn.Position = UDim2.new(0.75, 0, 0, y)
+kbBtn.BackgroundColor3 = Color3.fromRGB(60,60,80)
+kbBtn.Text = Enum.KeyCode[settings.keybind].Name
+kbBtn.Font = Enum.Font.GothamBold
+kbBtn.TextColor3 = Color3.fromRGB(255,255,255)
+kbBtn.TextSize = 15
+kbBtn.ZIndex = 13
+
+y = y + 36
+
+-- SAVE SETTINGS BUTTON
+local saveBtn = Instance.new("TextButton", dialog)
+saveBtn.Size = UDim2.new(0.32, 0, 0, 32)
+saveBtn.Position = UDim2.new(0.07, 0, 0, y)
+saveBtn.BackgroundColor3 = Color3.fromRGB(80,200,100)
+saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
+saveBtn.Text = "Save Settings"
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 16
+saveBtn.BorderSizePixel = 0
+saveBtn.ZIndex = 13
+
+local reloadBtn = Instance.new("TextButton", dialog)
+reloadBtn.Size = UDim2.new(0.32, 0, 0, 32)
+reloadBtn.Position = UDim2.new(0.61, 0, 0, y)
+reloadBtn.BackgroundColor3 = Color3.fromRGB(80,120,230)
+reloadBtn.TextColor3 = Color3.fromRGB(255,255,255)
+reloadBtn.Text = "Reload"
+reloadBtn.Font = Enum.Font.GothamBold
+reloadBtn.TextSize = 16
+reloadBtn.BorderSizePixel = 0
+reloadBtn.ZIndex = 13
+
+y = y + 40
+
+-- FOOTER INFO
+local note = Instance.new("TextLabel", dialog)
+note.Size = UDim2.new(1, -20, 0, 44)
+note.Position = UDim2.new(0, 10, 1, -52)
+note.BackgroundTransparency = 1
+note.Text = "Drag menu btn | Click btn to open/close menu\nESP universal. All settings saved locally."
+note.Font = Enum.Font.Gotham
+note.TextColor3 = Color3.fromRGB(190,190,190)
+note.TextSize = 13
+note.TextWrapped = true
+note.ZIndex = 12
+
+-- DRAG MENU BUTTON ONLY
+local dragging, dragInput, dragStart, startPos
+menuBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = menuBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                settings.menuBtnPos = {menuBtn.Position.X.Offset, menuBtn.Position.Y.Offset}
+                saveSettings(settings)
+            end
+        end)
+    end
+end)
+menuBtn.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        menuBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                     startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- MENU OPEN/CLOSE
+menuBtn.MouseButton1Click:Connect(function()
+    dialog.Visible = not dialog.Visible
+end)
+
+-- CENTER DIALOG ON RESIZE
+local function centerDialog()
+    dialog.Position = UDim2.new(0.5, -dialog.AbsoluteSize.X/2, 0.5, -dialog.AbsoluteSize.Y/2)
+end
+dialog:GetPropertyChangedSignal("AbsoluteSize"):Connect(centerDialog)
+centerDialog()
+
+-- KEYBIND LOGIC
+local waitingKey = false
+kbBtn.MouseButton1Click:Connect(function()
+    kbBtn.Text = "..."
+    waitingKey = true
+end)
+UserInputService.InputBegan:Connect(function(input, gp)
+    if waitingKey and input.UserInputType == Enum.UserInputType.Keyboard then
+        settings.keybind = input.KeyCode.Value
+        kbBtn.Text = input.KeyCode.Name
+        waitingKey = false
+    elseif not gp and input.KeyCode.Value == settings.keybind then
+        settings.espEnabled = not settings.espEnabled
+        for _,t in ipairs(toggles) do
+            if t.key == "espEnabled" then
+                t.check.Text = settings.espEnabled and "✔" or ""
+                t.btn.BackgroundColor3 = settings.espEnabled and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+            end
+        end
+    end
+end)
+
+-- TOGGLE BUTTONS LOGIC
+for _,tog in ipairs(toggles) do
+    tog.btn.MouseButton1Click:Connect(function()
+        settings[tog.key] = not settings[tog.key]
+        tog.check.Text = settings[tog.key] and "✔" or ""
+        tog.btn.BackgroundColor3 = settings[tog.key] and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+    end)
+end
+
+-- DROPDOWN LOGIC
+partDropdown.MouseButton1Click:Connect(function()
+    local opts = {"All","Head","Torso"}
+    local idx = table.find(opts, settings.partMode) or 1
+    idx = idx + 1; if idx > #opts then idx = 1 end
+    settings.partMode = opts[idx]
+    partDropdown.Text = settings.partMode
+end)
+
+-- SLIDER LOGIC
+local function slider(bar, fill, drag, lbl, setting, min, max, isFloat)
+    local dragging = false
+    local function setFromPos(x)
+        local rel = math.clamp((x-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+        local val = min + (max-min)*rel
+        if not isFloat then val = math.floor(val+0.5) end
+        fill.Size = UDim2.new(rel,0,1,0)
+        drag.Position = UDim2.new(rel, -10, 0, 0)
+        settings[setting] = val
+        if setting == "rgbSpeed" then
+            lbl.Text = "RGB Speed ("..val..")"
+        elseif setting == "outlineTransparency" then
+            lbl.Text = "Outline Transparency ("..string.format("%.2f", val)..")"
+        elseif setting == "outlineThickness" then
+            lbl.Text = "Outline Thickness ("..val..")"
+        end
+    end
+    drag.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            setFromPos(input.Position.X)
+            dragging = true
+        end
+    end)
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouse = UserInputService:GetMouseLocation()
+            setFromPos(mouse.X)
+        end
+    end)
+end
+slider(rgbBar, rgbFill, rgbDrag, rgbLbl, "rgbSpeed", 1, 10, false)
+slider(transpBar, transpFill, transpDrag, transpLbl, "outlineTransparency", 0, 1, true)
+slider(thickBar, thickFill, thickDrag, thickLbl, "outlineThickness", 1, 5, false)
+
+-- SAVE/RELOAD BUTTON
+saveBtn.MouseButton1Click:Connect(function()
+    saveSettings(settings)
+    saveBtn.Text = "Saved!"
+    wait(1)
+    saveBtn.Text = "Save Settings"
+end)
+reloadBtn.MouseButton1Click:Connect(function()
+    settings = loadSettings()
+    for _,t in ipairs(toggles) do
+        t.check.Text = settings[t.key] and "✔" or ""
+        t.btn.BackgroundColor3 = settings[t.key] and Color3.fromRGB(60,180,60) or Color3.fromRGB(50,50,50)
+    end
+    partDropdown.Text = settings.partMode
+    rgbLbl.Text = "RGB Speed ("..settings.rgbSpeed..")"
+    rgbFill.Size = UDim2.new((settings.rgbSpeed-1)/9,0,1,0)
+    rgbDrag.Position = UDim2.new((settings.rgbSpeed-1)/9,-10,0,0)
+    transpLbl.Text = "Outline Transparency ("..string.format("%.2f", settings.outlineTransparency)..")"
+    transpFill.Size = UDim2.new(settings.outlineTransparency,0,1,0)
+    transpDrag.Position = UDim2.new(settings.outlineTransparency,-10,0,0)
+    thickLbl.Text = "Outline Thickness ("..settings.outlineThickness..")"
+    thickFill.Size = UDim2.new((settings.outlineThickness-1)/4,0,1,0)
+    thickDrag.Position = UDim2.new((settings.outlineThickness-1)/4,-10,0,0)
+    kbBtn.Text = Enum.KeyCode[settings.keybind].Name
+end)
+
+-- ESP LOGIC
+local ESP_Highlights = {}
+local BoxESP = {}
+local TracerESP = {}
+local HealthESP = {}
+local DistESP = {}
+
+local function isEnemy(player)
+    if not settings.teamCheck then return true end
+    local lpt = LocalPlayer.Team
+    return player.Team and player.Team ~= lpt
+end
+
+local function getRainbowColor(t)
+    return Color3.fromHSV((tick()*settings.rgbSpeed)%1, 1, 1)
+end
+
+local function clearESP()
+    for _,v in pairs(ESP_Highlights) do pcall(function() v:Destroy() end) end
+    for _,v in pairs(BoxESP) do pcall(function() v:Remove() end) end
+    for _,v in pairs(TracerESP) do pcall(function() v:Remove() end) end
+    for _,v in pairs(HealthESP) do pcall(function() v:Remove() end) end
+    for _,v in pairs(DistESP) do pcall(function() v:Remove() end) end
+    table.clear(ESP_Highlights)
+    table.clear(BoxESP)
+    table.clear(TracerESP)
+    table.clear(HealthESP)
+    table.clear(DistESP)
+end
+
+local Drawing = Drawing or getgenv().Drawing -- Try to get Drawing API, if available
+
+local function makeBox()
+    if not Drawing then return nil end
+    local box = {}
+    for i=1,4 do
+        box[i] = Drawing.new("Line")
+        box[i].Thickness = settings.outlineThickness
+        box[i].Color = Color3.new(1,1,1)
+        box[i].Transparency = 1-settings.outlineTransparency
+        box[i].ZIndex = 2
+    end
+    return box
+end
+
+local function makeTracer()
+    if not Drawing then return nil end
+    local tr = Drawing.new("Line")
+    tr.Thickness = settings.outlineThickness
+    tr.Color = Color3.new(1,1,1)
+    tr.Transparency = 1-settings.outlineTransparency
+    tr.ZIndex = 2
+    return tr
+end
+
+local function makeLabel()
+    if not Drawing then return nil end
+    local lbl = Drawing.new("Text")
+    lbl.Size = 15
+    lbl.Center = true
+    lbl.Outline = true
+    lbl.ZIndex = 3
+    return lbl
+end
+
+local function getCharRoot(char)
+    if settings.partMode == "All" then
+        return char:FindFirstChild("HumanoidRootPart")
+    elseif settings.partMode == "Head" then
+        return char:FindFirstChild("Head")
+    elseif settings.partMode == "Torso" then
+        return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    end
+end
+
+local function createESP(player,char,isNPC)
+    if not char then return end
+    if not isNPC and player == LocalPlayer then return end
+    if not isNPC and not isEnemy(player) then return end
+    local root = getCharRoot(char)
+    if not root then return end
+    -- HIGHLIGHT
+    if settings.espEnabled then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "RGB_ESP"
+        highlight.FillTransparency = 1
+        highlight.OutlineTransparency = settings.outlineTransparency
+        highlight.OutlineColor = getRainbowColor()
+        highlight.OutlineThickness = settings.outlineThickness
+        highlight.Parent = root.Parent
+        ESP_Highlights[char] = highlight
+    end
+    -- BOX ESP
+    if settings.boxEnabled and Drawing then
+        local box = makeBox()
+        BoxESP[char] = box
+    end
+    -- TRACER
+    if settings.tracersEnabled and Drawing then
+        local tr = makeTracer()
+        TracerESP[char] = tr
+    end
+    -- HEALTH
+    if settings.healthEnabled and Drawing then
+        local lbl = makeLabel()
+        HealthESP[char] = lbl
+    end
+    -- DIST
+    if settings.distanceEnabled and Drawing then
+        local lbl = makeLabel()
+        DistESP[char] = lbl
+    end
+end
+
+local function removeESP(char)
+    if ESP_Highlights[char] then ESP_Highlights[char]:Destroy() ESP_Highlights[char]=nil end
+    if BoxESP[char] then for _,l in pairs(BoxESP[char]) do l:Remove() end BoxESP[char]=nil end
+    if TracerESP[char] then TracerESP[char]:Remove() TracerESP[char]=nil end
+    if HealthESP[char] then HealthESP[char]:Remove() HealthESP[char]=nil end
+    if DistESP[char] then DistESP[char]:Remove() DistESP[char]=nil end
+end
+
+local function scanPlayers()
+    clearESP()
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer or settings.npcEnabled then
+            local char = p.Character
+            if char and getCharRoot(char) then
+                createESP(p,char,false)
+            end
+        end
+    end
+    if settings.npcEnabled then
+        for _,npc in ipairs(Workspace:GetDescendants()) do
+            if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+                if getCharRoot(npc) then createESP(nil,npc,true) end
+            end
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        if (settings.espEnabled or settings.boxEnabled or settings.tracersEnabled or settings.healthEnabled or settings.distanceEnabled) then
+            createESP(p,char,false)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    local char = p.Character
+    if char then removeESP(char) end
+end)
+
+-- ESP LOOP
+RunService.RenderStepped:Connect(function()
+    if not (settings.espEnabled or settings.boxEnabled or settings.tracersEnabled or settings.healthEnabled or settings.distanceEnabled) then
+        clearESP()
+        return
+    end
+    for _,p in ipairs(Players:GetPlayers()) do
+        local char = p.Character
+        if char and getCharRoot(char) then
+            createESP(p,char,false)
+        end
+    end
+    if settings.npcEnabled then
+        for _,npc in ipairs(Workspace:GetDescendants()) do
+            if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+                if getCharRoot(npc) then createESP(nil,npc,true) end
+            end
+        end
+    end
+    -- Update ESP visuals
+    for char,highlight in pairs(ESP_Highlights) do
+        if highlight and highlight.Parent then
+            highlight.OutlineColor = getRainbowColor()
+            highlight.OutlineTransparency = settings.outlineTransparency
+            highlight.OutlineThickness = settings.outlineThickness
+        end
+    end
+    -- Drawing-based ESP
+    if Drawing then
+        for char,box in pairs(BoxESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent and root.Parent:FindFirstChildOfClass("Humanoid") and root.Parent:FindFirstChild("Head") then
+                local pos,onscreen = Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+                local head = root.Parent:FindFirstChild("Head").Position
+                local hpos,onh = Workspace.CurrentCamera:WorldToViewportPoint(head)
+                local sizeY = math.abs(hpos.Y-pos.Y)
+                local sizeX = sizeY/2
+                if onscreen then
+                    box[1].From,box[1].To = Vector2.new(pos.X-sizeX,pos.Y-sizeY),Vector2.new(pos.X+sizeX,pos.Y-sizeY)
+                    box[2].From,box[2].To = Vector2.new(pos.X+sizeX,pos.Y-sizeY),Vector2.new(pos.X+sizeX,pos.Y+sizeY)
+                    box[3].From,box[3].To = Vector2.new(pos.X+sizeX,pos.Y+sizeY),Vector2.new(pos.X-sizeX,pos.Y+sizeY)
+                    box[4].From,box[4].To = Vector2.new(pos.X-sizeX,pos.Y+sizeY),Vector2.new(pos.X-sizeX,pos.Y-sizeY)
+                    for _,l in ipairs(box) do
+                        l.Visible = true
+                        l.Color = getRainbowColor()
+                        l.Transparency = 1-settings.outlineTransparency
+                        l.Thickness = settings.outlineThickness
+                    end
+                else
+                    for _,l in ipairs(box) do l.Visible = false end
+                end
+            end
+        end
+        for char,tr in pairs(TracerESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+                if onscreen then
+                    tr.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X/2, Workspace.CurrentCamera.ViewportSize.Y)
+                    tr.To = Vector2.new(pos.X,pos.Y)
+                    tr.Visible = true
+                    tr.Color = getRainbowColor()
+                    tr.Transparency = 1-settings.outlineTransparency
+                    tr.Thickness = settings.outlineThickness
+                else
+                    tr.Visible = false
+                end
+            end
+        end
+        for char,lbl in pairs(HealthESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+                local hum = root.Parent:FindFirstChildOfClass("Humanoid")
+                if onscreen and hum then
+                    lbl.Position = Vector2.new(pos.X,pos.Y-40)
+                    lbl.Visible = true
+                    lbl.Text = math.floor(hum.Health).."/"..math.floor(hum.MaxHealth)
+                    lbl.Color = Color3.fromRGB(80,255,80)
+                else
+                    lbl.Visible = false
+                end
+            end
+        end
+        for char,lbl in pairs(DistESP) do
+            local root = getCharRoot(char)
+            if root and root.Parent then
+                local pos,onscreen = Workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+                if onscreen then
+                    local dist = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")) and
+                        (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).magnitude or 0
+                    lbl.Position = Vector2.new(pos.X,pos.Y+40)
+                    lbl.Visible = true
+                    lbl.Text = "["..math.floor(dist).."m]"
+                    lbl.Color = Color3.fromRGB(220,220,80)
+                else
+                    lbl.Visible = false
+                end
+            end
+        end
+    end
+end)
+
+-- INITIAL SCAN
+scanPlayers()
+
+-- AUTO-UPDATE on setting change
+for _,t in ipairs(toggles) do
+    t.btn.MouseButton1Click:Connect(scanPlayers)
+end
+partDropdown.MouseButton1Click:Connect(scanPlayers)
+rgbDrag.MouseButton1Down:Connect(scanPlayers)
+transpDrag.MouseButton1Down:Connect(scanPlayers)
+thickDrag.MouseButton1Down:Connect(scanPlayers)
+kbBtn.MouseButton1Click:Connect(scanPlayers)
+reloadBtn.MouseButton1Click:Connect(scanPlayers)
+
+-- CLEANUP
+gui.AncestryChanged:Connect(function(_, parent)
+    if not parent then clearESP() end
+end)
+
+-- END
